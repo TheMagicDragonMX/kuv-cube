@@ -4,7 +4,7 @@ WEBHOOK_URL = "https://discordapp.com/api/webhooks/1514011996553740388/Xj5aK-q5e
 
 response = requests.post(
     WEBHOOK_URL,
-    json={"content": "Aqui andamos al 100 siuUUUuUuu :33"}
+    json={"content": "Ya ando tranquilito, pido perdones D:"}
 )
 
 print(response.status_code)
