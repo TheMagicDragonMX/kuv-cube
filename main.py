@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn all chained LED panels red. Run with sudo."""
+"""Turn all LED panels blue. Run with sudo."""
 
 import time
 
@@ -8,7 +8,8 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
 PANEL_ROWS = 64
 PANEL_COLUMNS = 64
-PANEL_CHAIN_LENGTH = 4
+PANEL_CHAIN_LENGTH = 2
+PANEL_PARALLEL = 3
 BRIGHTNESS = 15
 GPIO_SLOWDOWN = 6
 
@@ -19,7 +20,7 @@ def create_matrix() -> RGBMatrix:
     options.rows = PANEL_ROWS
     options.cols = PANEL_COLUMNS
     options.chain_length = PANEL_CHAIN_LENGTH
-    options.parallel = 1
+    options.parallel = PANEL_PARALLEL
     options.hardware_mapping = "regular"
     options.row_address_type = 0
     options.brightness = BRIGHTNESS
@@ -30,7 +31,7 @@ def create_matrix() -> RGBMatrix:
 
 def main() -> None:
     matrix = create_matrix()
-    matrix.Fill(255, 0, 0)
+    matrix.Fill(0, 0, 255)
 
     try:
         while True:
