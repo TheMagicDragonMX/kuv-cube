@@ -37,7 +37,7 @@ Contract with the web app: `kuv-client/src/app/setup/README.md`.
 | `setup/identity.py` | The name (`Kuv-XXXX`), the PIN and the version |
 | `setup/display.py` | Shows the PIN on the matrix |
 
-The PIN is generated on first run and kept in `/var/lib/kuv/setup-pin`. Read it with `sudo cat /var/lib/kuv/setup-pin` if the matrix is unavailable. Environment variables (set in the unit): `KUV_SETUP_PIN` (override, empty turns it off), `KUV_STATE_DIR`, `KUV_SETUP_STAY=1` (do not hand over after setup), `KUV_SETUP_PAIRING=1` (require Bluetooth pairing, encrypts the link), `KUV_FONT`.
+The PIN is generated on first run and kept in `/var/lib/kuv/setup-pin`. Read it with `sudo cat /var/lib/kuv/setup-pin` if the matrix is unavailable. Environment variables (set in the unit): `KUV_SETUP_PIN` (override, empty turns it off), `KUV_STATE_DIR`, `KUV_SETUP_STAY=1` (do not hand over after setup), `KUV_SETUP_PAIRING=1` (require Bluetooth pairing, encrypts the link), `KUV_FONT`, `KUV_SETUP_DISPLAY=0` (never touch the matrix, for testing next to a running cube).
 
 System packages the Pi needs: `bluez` and `network-manager` (both default on Raspberry Pi OS Bookworm). The setup service runs as root because it uses the LED matrix and `nmcli`.
 

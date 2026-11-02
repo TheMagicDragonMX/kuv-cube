@@ -19,6 +19,11 @@ FONT_PATH = os.environ.get("KUV_FONT", "/home/luna/rpi-rgb-led-matrix/fonts/10x2
 BDF font used to draw the PIN.
 """
 
+ENABLED = os.environ.get("KUV_SETUP_DISPLAY") != "0"
+"""
+Set KUV_SETUP_DISPLAY=0 to keep setup away from the matrix, e.g. while testing next to a running cube.
+"""
+
 TEXT_LEFT = 4
 """
 Pixels between the left edge of the matrix and the text.
@@ -66,7 +71,7 @@ class PinDisplay:
         if self._pin is None:
             return
 
-        matrix = self._open()
+        matrix = self._open() if ENABLED else None
 
         if matrix is None:
             logger.info("PIN: %s (no matrix to show it on)", self._pin)

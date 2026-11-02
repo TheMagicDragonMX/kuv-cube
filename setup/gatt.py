@@ -20,6 +20,7 @@ from bluez_peripheral.gatt.service import Service, ServiceCollection
 from bluez_peripheral.util import Adapter, get_message_bus
 from dbus_next import Message, MessageType
 from dbus_next.aio import MessageBus
+from dbus_next.errors import DBusError
 
 from setup.bridge import Bridge
 from setup.protocol import RX_CHARACTERISTIC_UUID, SERVICE_UUID, TX_CHARACTERISTIC_UUID
@@ -42,6 +43,31 @@ UNKNOWN_DEVICE = "unknown"
 Stands in for the device path when BlueZ does not tell which device wrote.
 """
 
+POWER_ON_ATTEMPTS = 10
+"""
+Times the adapter's power is checked before giving up.
+"""
+
+POWER_ON_DELAY = 0.5
+"""
+Seconds between those checks.
+"""
+
+BLUEZ_SERVICE = "org.bluez"
+"""
+The bus name BlueZ answers on.
+"""
+
+BLUEZ_ROOT_PATH = "/org/bluez"
+"""
+The object under which BlueZ exposes its adapters.
+"""
+
+ADAPTER_INTERFACE = "org.bluez.Adapter1"
+"""
+The interface that marks an object as a Bluetooth adapter.
+"""
+
 BLUEZ_PROPERTIES_RULE = (
     "type='signal',sender='org.bluez',"
     "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"
@@ -49,6 +75,64 @@ BLUEZ_PROPERTIES_RULE = (
 """
 Match rule that delivers BlueZ's property changes, used to notice a page disconnecting.
 """
+
+
+async def unblock_bluetooth() -> None:
+    """
+    Lifts the rfkill soft block on Bluetooth, which BlueZ cannot power the adapter through.
+
+    Best effort: without rfkill, or when it fails, powering the adapter reports the real problem.
+    """
+    try:
+        process = await asyncio.create_subprocess_exec("rfkill", "unblock", "bluetooth")
+
+        await process.wait()
+
+    except OSError:
+        pass
+
+
+async def find_adapter(bus: MessageBus) -> Adapter:
+    """
+    The first Bluetooth adapter BlueZ exposes.
+
+    `Adapter.get_first` treats every node under /org/bluez as an adapter and fails when BlueZ also
+    exposes something else there (a `test` node shows up on the cube), so look for the interface.
+    """
+    root = await bus.introspect(BLUEZ_SERVICE, BLUEZ_ROOT_PATH)
+
+    for node in root.nodes:
+        path = f"{BLUEZ_ROOT_PATH}/{node.name}"
+        introspection = await bus.introspect(BLUEZ_SERVICE, path)
+
+        if any(interface.name == ADAPTER_INTERFACE for interface in introspection.interfaces):
+            return Adapter(bus.get_proxy_object(BLUEZ_SERVICE, path, introspection))
+
+    raise RuntimeError("No Bluetooth adapter found")
+
+
+async def power_on(adapter: Adapter) -> None:
+    """
+    Makes sure the adapter is powered.
+
+    Right after the rfkill unblock BlueZ powers the adapter on by itself, and asking it again at
+    that moment fails, so give it a moment first and only then ask.
+    """
+    for attempt in range(POWER_ON_ATTEMPTS):
+        if await adapter.get_powered():
+            return
+
+        await asyncio.sleep(POWER_ON_DELAY)
+
+        if attempt == POWER_ON_ATTEMPTS // 2:
+            try:
+                await adapter.set_powered(True)
+
+            except DBusError:
+                pass
+
+    if not await adapter.get_powered():
+        raise RuntimeError("The Bluetooth adapter would not power on")
 
 
 class SetupService(Service):
@@ -150,10 +234,12 @@ class GattServer:
         """
         self.service.attach(bridge)
 
-        self._bus = await get_message_bus()
-        adapter = await Adapter.get_first(self._bus)
+        await unblock_bluetooth()
 
-        await adapter.set_powered(True)
+        self._bus = await get_message_bus()
+        adapter = await find_adapter(self._bus)
+
+        await power_on(adapter)
 
         if REQUIRE_PAIRING:
             self._agent = NoIoAgent()

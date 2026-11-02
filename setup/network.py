@@ -202,20 +202,34 @@ class Network:
 
         return {"networks": ordered}
 
-    async def saved(self) -> list[str]:
+    async def profiles(self) -> dict[str, str]:
         """
-        Names of the WiFi connections NetworkManager remembers.
+        The WiFi connections NetworkManager remembers, as profile name to SSID.
+
+        A profile's name is not always its SSID (Raspberry Pi OS names them like
+        "netplan-wlan0-Home"), so the SSID is read from the profile itself.
         """
         output = await run_nmcli("-t", "-f", "NAME,TYPE", "connection", "show")
-        saved = []
+        names = []
 
         for line in output.splitlines():
             name, kind = pad_fields(split_terse(line), 2)
 
             if kind == WIFI_CONNECTION_TYPE:
-                saved.append(name)
+                names.append(name)
 
-        return saved
+        ssids = await asyncio.gather(*(
+            run_nmcli("-g", "802-11-wireless.ssid", "connection", "show", name)
+            for name in names
+        ))
+
+        return {name: ssid.strip() or name for name, ssid in zip(names, ssids)}
+
+    async def saved(self) -> list[str]:
+        """
+        SSIDs of the WiFi networks NetworkManager remembers.
+        """
+        return list(dict.fromkeys((await self.profiles()).values()))
 
     async def wifi_status(self) -> WifiStatus:
         """
@@ -238,7 +252,7 @@ class Network:
             return status
 
         output = await run_nmcli(
-            "-t", "-f", "GENERAL.STATE,GENERAL.CONNECTION,IP4.ADDRESS",
+            "-t", "-f", "GENERAL.STATE,IP4.ADDRESS",
             "device", "show", interface,
         )
         values: dict[str, str] = {}
@@ -250,28 +264,27 @@ class Network:
 
         if values.get("GENERAL.STATE", "").startswith("100"):
             status["state"] = WIFI_CONNECTED
-            status["ssid"] = values.get("GENERAL.CONNECTION") or None
             status["ip"] = values.get("IP4.ADDRESS", "").split("/")[0] or None
-            status["signal"] = await self._signal(interface)
+            status["ssid"], status["signal"] = await self._active_network(interface)
 
         elif self._failed:
             status["state"] = WIFI_FAILED
 
         return status
 
-    async def _signal(self, interface: str) -> int | None:
+    async def _active_network(self, interface: str) -> tuple[str | None, int | None]:
         """
-        Signal strength of the network in use, 0 to 100.
+        The SSID and signal strength (0 to 100) of the network in use.
         """
-        output = await run_nmcli("-t", "-f", "IN-USE,SIGNAL", "device", "wifi", "list", "ifname", interface)
+        output = await run_nmcli("-t", "-f", "IN-USE,SSID,SIGNAL", "device", "wifi", "list", "ifname", interface)
 
         for line in output.splitlines():
-            in_use, signal = pad_fields(split_terse(line), 2)
+            in_use, ssid, signal = pad_fields(split_terse(line), 3)
 
-            if in_use == "*" and signal.isdigit():
-                return int(signal)
+            if in_use == "*":
+                return ssid or None, int(signal) if signal.isdigit() else None
 
-        return None
+        return None, None
 
     async def connect(self, ssid: str, password: str | None = None, hidden: bool = False) -> WifiStatus:
         """
@@ -286,16 +299,17 @@ class Network:
             raise ProtocolError(ERROR_BUSY, "Another WiFi operation is running")
 
         async with self._lock:
-            known = await self.saved()
+            before = await self.profiles()
+            saved_names = [name for name, known in before.items() if known == ssid]
             previous = (await self.wifi_status())["ssid"]
 
             self._connecting_ssid = ssid
             self._failed = False
 
             try:
-                if ssid in known and not password:
+                if saved_names and not password:
                     await run_nmcli(
-                        "--wait", str(CONNECT_TIMEOUT), "connection", "up", ssid,
+                        "--wait", str(CONNECT_TIMEOUT), "connection", "up", saved_names[0],
                         timeout=CONNECT_TIMEOUT + 5,
                     )
 
@@ -313,7 +327,7 @@ class Network:
             except ProtocolError:
                 self._failed = True
 
-                await self._recover(ssid, ssid in known, previous)
+                await self._recover(before, previous)
 
                 raise
 
@@ -322,16 +336,21 @@ class Network:
 
         return await self.wifi_status()
 
-    async def _recover(self, ssid: str, was_saved: bool, previous: str | None) -> None:
+    async def _recover(self, before: dict[str, str], previous: str | None) -> None:
         """
-        After a failed join: drops the half-made profile and goes back to the old network.
+        After a failed join: drops the profiles it left behind and goes back to the old network.
+
+        `before` is the profiles that existed when the attempt started.
         """
         try:
-            if not was_saved:
-                await run_nmcli("connection", "delete", ssid)
+            for name in (await self.profiles()):
+                if name not in before:
+                    await run_nmcli("connection", "delete", name)
 
-            if previous and previous != ssid:
-                await run_nmcli("connection", "up", previous, timeout=CONNECT_TIMEOUT)
+            previous_names = [name for name, known in before.items() if known == previous]
+
+            if previous_names:
+                await run_nmcli("connection", "up", previous_names[0], timeout=CONNECT_TIMEOUT)
 
         except ProtocolError:
             pass
@@ -343,5 +362,11 @@ class Network:
         if not ssid:
             raise ProtocolError(ERROR_BAD_REQUEST, "ssid is required")
 
+        names = [name for name, known in (await self.profiles()).items() if known == ssid]
+
+        if not names:
+            raise ProtocolError(ERROR_BAD_REQUEST, f"{ssid} is not a saved network")
+
         # `connection delete` also takes the connection down when it is active.
-        await run_nmcli("connection", "delete", ssid)
+        for name in names:
+            await run_nmcli("connection", "delete", name)
