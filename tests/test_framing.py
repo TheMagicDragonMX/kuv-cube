@@ -5,7 +5,7 @@ Tests for the message framing.
 import json
 import unittest
 
-from src.framing import MessageDecoder, encode_message
+from setup.framing import MessageDecoder, encode_message
 
 
 class FramingTest(unittest.TestCase):

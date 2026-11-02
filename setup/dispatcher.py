@@ -12,8 +12,8 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from src.network import Network, system_status
-from src.protocol import (
+from setup.network import Network, system_status
+from setup.protocol import (
     ERROR_BAD_REQUEST,
     ERROR_INTERNAL,
     ERROR_LOCKED,
@@ -161,6 +161,13 @@ class Dispatcher:
         """
         return {"wifi": await self._network.wifi_status(), "system": system_status()}
 
+    @property
+    def auth_required(self) -> bool:
+        """
+        Whether sessions must send the PIN before most operations.
+        """
+        return self._pin is not None
+
     def info(self) -> CubeInfo:
         """
         What the cube says about itself.
@@ -170,7 +177,7 @@ class Dispatcher:
             "version": self._version,
             "hostname": socket.gethostname(),
             "protocol": PROTOCOL_VERSION,
-            "authRequired": self._pin is not None,
+            "authRequired": self.auth_required,
         }
 
     async def _run(self, session: Session, request: dict[str, Any]) -> Any:
@@ -203,7 +210,7 @@ class Dispatcher:
         if handler is None:
             raise ProtocolError(ERROR_UNKNOWN_OP, f"Unknown operation: {operation}")
 
-        if self._pin is not None and not session.authenticated and operation not in OPEN_OPERATIONS:
+        if self.auth_required and not session.authenticated and operation not in OPEN_OPERATIONS:
             raise ProtocolError(ERROR_UNAUTHORIZED, "Send the PIN with `auth` first")
 
         return await handler(session, params)

@@ -1,0 +1,17 @@
+# Gets an offline cube onto WiFi over Bluetooth. Starts only when the cube is offline at boot;
+# when a page leaves with the cube online it starts kuv-cube.service (which stops this one).
+[Unit]
+Description=Kuv cube setup (Bluetooth + WiFi onboarding)
+After=network-online.target bluetooth.service NetworkManager.service
+Wants=bluetooth.service
+
+[Service]
+WorkingDirectory=/home/luna/kuv/kuv-cube
+Environment=KUV_SETUP_HANDOFF=kuv-cube.service
+ExecCondition=/bin/sh -c '! nmcli -t -g STATE general | grep -q "^connected"'
+ExecStart=/home/luna/kuv/venv/bin/python -m setup
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

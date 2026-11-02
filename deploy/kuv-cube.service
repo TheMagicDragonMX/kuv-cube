@@ -1,0 +1,17 @@
+# The cube program that runs once it is online. Starts only when the cube has a WiFi connection at
+# boot; otherwise kuv-setup.service runs first and starts this one when it is done.
+[Unit]
+Description=Kuv cube
+After=network-online.target NetworkManager.service
+
+[Service]
+WorkingDirectory=/home/luna/kuv/kuv-cube
+ExecCondition=/bin/sh -c 'nmcli -t -g STATE general | grep -q "^connected"'
+# Setup and the cube both need the LED matrix, so setup must let go of it first.
+ExecStartPre=-/usr/bin/systemctl stop kuv-setup.service
+ExecStart=/home/luna/kuv/venv/bin/python -m main
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -6,7 +6,7 @@ import asyncio
 import re
 from pathlib import Path
 
-from src.protocol import (
+from setup.protocol import (
     ERROR_BAD_REQUEST,
     ERROR_BUSY,
     ERROR_INTERNAL,

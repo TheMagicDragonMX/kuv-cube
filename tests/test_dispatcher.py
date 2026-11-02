@@ -6,8 +6,8 @@ import asyncio
 import unittest
 from typing import Any
 
-from src.dispatcher import MAX_PIN_ATTEMPTS, Dispatcher, Session
-from src.protocol import ERROR_WIFI_FAILED, ProtocolError
+from setup.dispatcher import MAX_PIN_ATTEMPTS, Dispatcher, Session
+from setup.protocol import ERROR_WIFI_FAILED, ProtocolError
 
 
 class FakeNetwork:
