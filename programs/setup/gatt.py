@@ -6,7 +6,6 @@ and gives the Bridge a way to notify.
 """
 
 import asyncio
-import logging
 import os
 
 from bluez_peripheral.advert import Advertisement
@@ -26,11 +25,6 @@ from dbus_next.errors import DBusError
 from programs.setup.bridge import Bridge
 from programs.setup.protocol import RX_CHARACTERISTIC_UUID, SERVICE_UUID, TX_CHARACTERISTIC_UUID
 
-
-logger = logging.getLogger(__name__)
-"""
-Where this module reports what it does.
-"""
 
 REQUIRE_PAIRING = os.environ.get("KUV_SETUP_PAIRING") == "1"
 """
@@ -247,8 +241,6 @@ class GattServer:
 
         await power_on(adapter)
 
-        logger.info("Bluetooth adapter is on")
-
         if REQUIRE_PAIRING:
             self._agent = NoIoAgent()
 
@@ -268,8 +260,6 @@ class GattServer:
         await self._advert.register(self._bus, adapter)
 
         await self._watch_disconnections(bridge)
-
-        logger.info("Bluetooth service registered%s", " (pairing required)" if REQUIRE_PAIRING else "")
 
     async def stop(self) -> None:
         """

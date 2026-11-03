@@ -202,8 +202,6 @@ class MatrixServer:
 
         self._shown = scene
 
-        logger.info("Showing %s", f"{winner.name}'s scene" if winner is not None else "nothing")
-
         try:
             self._screen.draw(scene)
 

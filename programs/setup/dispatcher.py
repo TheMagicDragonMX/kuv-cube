@@ -7,7 +7,6 @@ back, so it can be tested without a radio.
 
 import asyncio
 import hmac
-import logging
 import socket
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -24,16 +23,6 @@ from programs.setup.protocol import (
     ProtocolError,
 )
 
-
-logger = logging.getLogger(__name__)
-"""
-Where this module reports what it does.
-"""
-
-QUIET_OPERATIONS = ("status",)
-"""
-Operations a page repeats on its own, logged only when debugging.
-"""
 
 REBOOT_DELAY = 1
 """
@@ -126,24 +115,16 @@ class Dispatcher:
             return None
 
         request_id = request["id"]
-        operation = request.get("op")
 
-        # Only the operation is logged, never its params: they can hold a PIN or a WiFi password.
         try:
             result = await self._run(session, request)
-
-            logger.log(logging.DEBUG if operation in QUIET_OPERATIONS else logging.INFO, "%.32s ok", operation)
 
             return {"id": request_id, "ok": True, "result": result}
 
         except ProtocolError as error:
-            logger.warning("%.32s refused: %s (%s)", operation, error.code, error.message)
-
             return self._error(request_id, error.code, error.message)
 
         except Exception as error:
-            logger.exception("%.32s failed", operation)
-
             return self._error(request_id, ERROR_INTERNAL, str(error) or type(error).__name__)
 
     async def status(self) -> CubeStatus:

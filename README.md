@@ -23,7 +23,6 @@ Programs draw by sending the matrix program a "scene" (see `programs/common/matr
 | `programs/setup/` | Bluetooth + WiFi onboarding, run with `python -m programs.setup` by `kuv-setup.service`. See below |
 | `programs/main/` | Everything the cube does once online, run with `python -m programs.main` by `kuv-cube.service` |
 | `programs/common/` | What the programs share: the client and message format for talking to the matrix program |
-| `scripts/logs.sh` | Run on your laptop: streams the Pi's logs to your terminal (formatted by `scripts/format_logs.py`) |
 | `deploy/` | The systemd units for the programs above (copy to `/etc/systemd/system/`) |
 | `tests/` | `python3 -m unittest` |
 | `scripts/update.sh` | Auto-update script run by `kuv-update.timer` |
@@ -56,27 +55,6 @@ sudo /home/luna/kuv/venv/bin/python -m programs.setup      # from /home/luna/kuv
 ```
 
 (the matrix program must be running for the PIN to appear on the panels), then open the setup page in Chrome, pick `Kuv-XXXX`, and enter the PIN. Run `python3 -m unittest` to test everything that does not need the radio.
-
-### Watching the cube from your laptop
-
-`scripts/logs.sh` streams what the programs write down to your laptop's terminal. Run it on the laptop, not on the Pi: it uses `ssh pi`, so the laptop and the Pi must be on the same network, and the laptop needs `python3`.
-
-```bash
-./scripts/logs.sh              # follow all three programs, starting with the last 50 lines
-./scripts/logs.sh setup        # only one: matrix, setup or main (also: bluetooth, wifi)
-./scripts/logs.sh -b           # start from the last boot
-./scripts/logs.sh -s -n 200    # print the last 200 lines and stop
-```
-
-One line per event: the time (dim), the program it is about, then the message. `scripts/format_logs.py` does the tidying: it drops journal noise like `systemd[1]`, names systemd's own lines after the program they are about (dimmed), and marks warnings and errors in yellow and red.
-
-```
-19:28:52  main       Started, painting the panels blue
-19:28:52  matrix     main connected (priority 0)
-19:30:10  setup      WARN auth refused: unauthorized (Wrong PIN)
-```
-
-The Pi keeps the logs across reboots, so after a setup done while the Pi had no network you can read what happened (`./scripts/logs.sh -b setup`). Programs log what they do through `programs/common/logs.py`; never log secrets such as WiFi passwords or the PIN a page sent.
 
 ### Installing the units
 

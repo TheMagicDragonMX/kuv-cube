@@ -145,25 +145,6 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response["id"], 9)
         self.assertEqual(response["error"]["code"], "wifi_failed")
 
-    async def test_logs_never_hold_secrets(self) -> None:
-        """
-        The log says what was asked and how it went, but never the PIN or a WiFi password.
-        """
-        with self.assertLogs("programs.setup.dispatcher", level="DEBUG") as logged:
-            await self.ask("auth", {"pin": "0000"})
-            await self.ask("auth", {"pin": "1234"})
-            await self.ask("wifi.connect", {"ssid": "Casa", "password": "hunter2hunter2"})
-            await self.ask("wifi.connect", {"ssid": "Casa", "password": "wrong"})
-
-        text = "\n".join(logged.output)
-
-        self.assertNotIn("hunter2", text)
-        self.assertNotIn("1234", text)
-        self.assertNotIn("0000", text)
-        self.assertIn("auth refused: unauthorized", text)
-        self.assertIn("auth ok", text)
-        self.assertIn("wifi.connect refused: wifi_failed", text)
-
     async def test_unknown_op(self) -> None:
         """
         An operation the cube does not know is answered with `unknown_op`.

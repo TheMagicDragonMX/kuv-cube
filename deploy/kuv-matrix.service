@@ -4,8 +4,6 @@
 Description=Kuv LED matrix
 
 [Service]
-# Names this program's lines in the logs (see scripts/logs.sh).
-SyslogIdentifier=kuv-matrix
 WorkingDirectory=/home/luna/kuv/kuv-cube
 # Creates /run/kuv, where the socket lives.
 RuntimeDirectory=kuv

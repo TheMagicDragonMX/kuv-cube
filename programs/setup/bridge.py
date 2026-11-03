@@ -155,8 +155,6 @@ class Bridge:
         if link is None:
             link = self._links[device] = Link()
 
-            logger.info("Page connected (%d now)", len(self._links))
-
             if len(self._links) == 1 and self._on_first_connect is not None:
                 self._on_first_connect()
 
@@ -178,8 +176,6 @@ class Bridge:
         """
         if self._links.pop(device, None) is None:
             return
-
-        logger.info("Page disconnected (%d left)", len(self._links))
 
         if not self._links and self._on_last_disconnect is not None:
             self._on_last_disconnect()

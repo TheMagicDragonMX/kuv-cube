@@ -20,7 +20,6 @@ import os
 import signal
 from pathlib import Path
 
-from programs.common.logs import configure_logging
 from programs.common.matrix_client import MatrixClient
 from programs.common.matrix_protocol import SETUP_PRIORITY
 from programs.setup.bridge import Bridge
@@ -114,12 +113,6 @@ async def run() -> None:
     logger.info("Advertising as %s (%s)", name, "PIN needed" if pin else "no PIN")
 
     try:
-        logger.info("WiFi at startup: %s", (await network.wifi_status())["state"])
-
-    except Exception:
-        logger.exception("Could not read the WiFi at startup")
-
-    try:
         await finished.wait()
 
     finally:
@@ -132,7 +125,7 @@ def main() -> None:
     """
     Sets up logging and runs the service.
     """
-    configure_logging()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     asyncio.run(run())
 
 

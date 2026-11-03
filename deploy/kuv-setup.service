@@ -7,8 +7,6 @@ After=network-online.target bluetooth.service NetworkManager.service kuv-matrix.
 Wants=bluetooth.service kuv-matrix.service
 
 [Service]
-# Names this program's lines in the logs (see scripts/logs.sh).
-SyslogIdentifier=kuv-setup
 WorkingDirectory=/home/luna/kuv/kuv-cube
 Environment=KUV_SETUP_HANDOFF=kuv-cube.service
 ExecCondition=/bin/sh -c '! nmcli -t -g STATE general | grep -q "^connected"'
