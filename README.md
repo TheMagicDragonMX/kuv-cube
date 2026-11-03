@@ -15,6 +15,27 @@ boot ──► kuv-matrix.service (python -m programs.matrix)         always, ow
 
 Programs draw by sending the matrix program a "scene" (see `programs/common/matrix_protocol.py`). The scene of the highest-priority program wins: the PIN (setup) is shown over whatever main draws, and main comes back by itself when the PIN is cleared or setup stops.
 
+## Where we are
+
+*Checked on the Pi on 2026-11-03.* The three programs run as intended: `kuv-matrix` and `kuv-cube` are active, `kuv-setup` is correctly skipped because the cube is online, the update timer is healthy, and the CPU is at about 53 °C. The cube runs the live-link code (`50ddd06`), but the **link is off** because `/etc/kuv/kuv.env` does not exist on the Pi yet (only the old `/etc/kuv/discord.env`), so main logs "running without the live link".
+
+Done in the repo, **not yet on the Pi**: the single config file (`deploy/kuv.env.example`, see [Configuration](#configuration)) and the units that read it. The Pi gets them when this is pushed to `dev` and the update timer pulls it.
+
+**Next steps, in order** (do the first two before pushing, or the Discord alerts stop):
+
+1. On the Pi, create the config file and keep the webhooks:
+   ```bash
+   sudo cp /home/luna/kuv/kuv-cube/deploy/kuv.env.example /etc/kuv/kuv.env   # after the push; or copy it by hand
+   sudo chmod 600 /etc/kuv/kuv.env
+   sudo sh -c 'cat /etc/kuv/discord.env >> /etc/kuv/kuv.env'                  # then delete the placeholder DISCORD_* lines
+   ```
+2. In `/etc/kuv/kuv.env` set `KUV_SERVER_URL` to the address the Pi reaches the API at (the LAN IP of the computer running kuv-api, port 5038) and `KUV_CUBE_SECRET` to a new random secret (`openssl rand -hex 32`).
+3. Run kuv-api with the same secret as `Cubes__Secret`, listening on the LAN and not only on localhost (`dotnet run --urls http://0.0.0.0:5038`).
+4. Push to `dev`, then `sudo systemctl daemon-reload && sudo systemctl restart kuv-cube.service`.
+5. Check: `journalctl -u kuv-cube -e` must say "Linked to the server as cube …". Then open the web app at `/cube-chat` (log in first), type the cube id (`cat /etc/machine-id` on the Pi, or `KUV_CUBE_ID`) and send a message: the cube answers with a mock reply.
+
+**After that**, the live link is ready to carry real commands: the next feature is a `play_program` command (server sends a program JSON, the handler validates it and calls `CubePlayer.play`), then the cube sending user inputs to the server. Known gaps of the link: the client's token is only checked when the socket opens; the web app's server address (`ws://localhost:5038`) and the production origin checks are not configurable yet; `PANEL_SLOTS` in `programs/main/cube/view/panel_layout.py` is still a placeholder until the real panel wiring is set.
+
 ## Repository
 
 | Path | What it is |
