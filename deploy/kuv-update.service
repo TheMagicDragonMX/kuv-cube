@@ -1,0 +1,12 @@
+# Pulls the cube source code from GitHub when there is something new. Run by kuv-update.timer.
+[Unit]
+Description=Check GitHub for updates of the cube source code
+After=network.target
+
+[Service]
+Type=oneshot
+User=luna
+EnvironmentFile=/etc/kuv/discord.env
+# A hung git or pip would otherwise keep the timer from ever firing again.
+TimeoutStartSec=300
+ExecStart=/home/luna/kuv/kuv-cube/scripts/update.sh

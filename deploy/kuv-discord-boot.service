@@ -1,0 +1,14 @@
+# Tells Discord the Pi booted. Never fails the boot: with no network the message is just lost.
+[Unit]
+Description=Alert to Discord when the Pi booted up
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/kuv/discord.env
+ExecStart=-/usr/bin/curl -sS -m 10 -H "Content-Type: application/json" -X POST -d "{\"embeds\": [{\"title\": \"🍒 Rasbperry Pi\", \"description\": \"The `Pi` is _fucking_ running 😼\", \"color\": 5763719 }]}" ${DISCORD_WEBHOOK_URL}
+
+[Install]
+WantedBy=multi-user.target

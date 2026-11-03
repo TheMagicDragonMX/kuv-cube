@@ -63,6 +63,7 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
         A dispatcher with PIN 1234, a fake network and a recorded reboot.
         """
         self.rebooted = asyncio.Event()
+        self.now = 0.0
         self.network = FakeNetwork()
         self.session = Session()
 
@@ -75,6 +76,7 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
             "0.0.0",
             "1234",
             reboot=reboot,
+            clock=lambda: self.now,
         )
 
     async def ask(self, operation: str, params: Any = None, request_id: int = 1) -> dict:
@@ -115,16 +117,33 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(allowed["ok"])
 
-    async def test_wrong_pins_can_be_retried_forever(self) -> None:
+    async def test_too_many_wrong_pins_lock_auth_for_a_minute(self) -> None:
         """
-        Any number of wrong PINs is refused one by one, and the right one still works afterwards.
+        Five wrong PINs lock `auth`, even for the right PIN, until the minute passes.
         """
-        for _ in range(50):
+        for _ in range(5):
             response = await self.ask("auth", {"pin": "0000"})
 
             self.assertEqual(response["error"]["code"], "unauthorized")
 
+        locked = await self.ask("auth", {"pin": "1234"})
+
+        self.assertEqual(locked["error"]["code"], "locked")
+
+        self.now = 61.0
+
         self.assertTrue((await self.ask("auth", {"pin": "1234"}))["ok"])
+
+    async def test_lock_survives_a_new_connection(self) -> None:
+        """
+        Reconnecting does not give a fresh set of attempts.
+        """
+        for _ in range(5):
+            await self.ask("auth", {"pin": "0000"})
+
+        self.session = Session()
+
+        self.assertEqual((await self.ask("auth", {"pin": "1234"}))["error"]["code"], "locked")
 
     async def test_connect_validates_params(self) -> None:
         """

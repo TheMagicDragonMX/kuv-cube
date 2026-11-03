@@ -4,7 +4,7 @@
 [Unit]
 Description=Kuv cube
 After=network-online.target NetworkManager.service kuv-matrix.service
-Wants=kuv-matrix.service
+Wants=network-online.target kuv-matrix.service
 
 [Service]
 WorkingDirectory=/home/luna/kuv/kuv-cube

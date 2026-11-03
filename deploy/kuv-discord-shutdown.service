@@ -1,0 +1,18 @@
+# Tells Discord the Pi is shutting down. It is started at boot and does its work when it is
+# stopped at shutdown: being stopped after the network units (because of the After= lines) is what
+# keeps the network up while the message is sent.
+[Unit]
+Description=Alert to Discord when the Pi is shutting down
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/kuv/discord.env
+ExecStart=/bin/true
+ExecStop=-/usr/bin/curl -sS -m 10 -H "Content-Type: application/json" -X POST -d "{\"embeds\": [{\"title\": \"🍒 Rasbperry Pi\", \"description\": \"The `Pi` is shutting down...\", \"color\": 15158332 }]}" ${DISCORD_WEBHOOK_SHUTDOWN_URL}
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

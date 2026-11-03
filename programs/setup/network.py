@@ -4,6 +4,7 @@ WiFi control through NetworkManager (nmcli), shaped like the setup protocol's an
 
 import asyncio
 import re
+import time
 from pathlib import Path
 
 from programs.setup.protocol import (
@@ -35,6 +36,12 @@ Seconds a scan may take.
 COMMAND_TIMEOUT = 10
 """
 Seconds any other nmcli command may take.
+"""
+
+SAVED_CACHE_SECONDS = 30
+"""
+Seconds the list of saved networks is reused. The status is read every couple of seconds while a
+page is connected, and listing the profiles takes one nmcli call per profile.
 """
 
 WIFI_CONNECTION_TYPE = "802-11-wireless"
@@ -148,6 +155,16 @@ class Network:
         Whether the last attempt to join a network failed.
         """
 
+        self._saved: list[str] | None = None
+        """
+        The saved SSIDs read last time, or None when they must be read again.
+        """
+
+        self._saved_at = 0.0
+        """
+        When `_saved` was read, on the monotonic clock.
+        """
+
     async def wifi_interface(self) -> str:
         """
         The WiFi device name, found once.
@@ -227,9 +244,14 @@ class Network:
 
     async def saved(self) -> list[str]:
         """
-        SSIDs of the WiFi networks NetworkManager remembers.
+        SSIDs of the WiFi networks NetworkManager remembers, reread at most every
+        SAVED_CACHE_SECONDS and after every change this class makes.
         """
-        return list(dict.fromkeys((await self.profiles()).values()))
+        if self._saved is None or time.monotonic() - self._saved_at > SAVED_CACHE_SECONDS:
+            self._saved = list(dict.fromkeys((await self.profiles()).values()))
+            self._saved_at = time.monotonic()
+
+        return self._saved
 
     async def wifi_status(self) -> WifiStatus:
         """
@@ -274,9 +296,10 @@ class Network:
 
     async def _active_network(self, interface: str) -> tuple[str | None, int | None]:
         """
-        The SSID and signal strength (0 to 100) of the network in use.
+        The SSID and signal strength (0 to 100) of the network in use, from the last scan: asking
+        for a rescan here would interrupt the connection every time the status is read.
         """
-        output = await run_nmcli("-t", "-f", "IN-USE,SSID,SIGNAL", "device", "wifi", "list", "ifname", interface)
+        output = await run_nmcli("-t", "-f", "IN-USE,SSID,SIGNAL", "device", "wifi", "list", "ifname", interface, "--rescan", "no")
 
         for line in output.splitlines():
             in_use, ssid, signal = pad_fields(split_terse(line), 3)
@@ -307,7 +330,12 @@ class Network:
             self._failed = False
 
             try:
-                if saved_names and not password:
+                if saved_names:
+                    # A new password for a saved network replaces the one in its profile, so
+                    # joining does not leave a second profile for the same network behind.
+                    if password:
+                        await run_nmcli("connection", "modify", saved_names[0], "wifi-sec.psk", password)
+
                     await run_nmcli(
                         "--wait", str(CONNECT_TIMEOUT), "connection", "up", saved_names[0],
                         timeout=CONNECT_TIMEOUT + 5,
@@ -333,6 +361,7 @@ class Network:
 
             finally:
                 self._connecting_ssid = None
+                self._saved = None
 
         return await self.wifi_status()
 
@@ -362,11 +391,18 @@ class Network:
         if not ssid:
             raise ProtocolError(ERROR_BAD_REQUEST, "ssid is required")
 
-        names = [name for name, known in (await self.profiles()).items() if known == ssid]
+        if self._lock.locked():
+            raise ProtocolError(ERROR_BUSY, "Another WiFi operation is running")
 
-        if not names:
-            raise ProtocolError(ERROR_BAD_REQUEST, f"{ssid} is not a saved network")
+        # Held so a forget cannot run in the middle of a connection attempt.
+        async with self._lock:
+            names = [name for name, known in (await self.profiles()).items() if known == ssid]
 
-        # `connection delete` also takes the connection down when it is active.
-        for name in names:
-            await run_nmcli("connection", "delete", name)
+            if not names:
+                raise ProtocolError(ERROR_BAD_REQUEST, f"{ssid} is not a saved network")
+
+            self._saved = None
+
+            # `connection delete` also takes the connection down when it is active.
+            for name in names:
+                await run_nmcli("connection", "delete", name)

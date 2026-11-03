@@ -1,0 +1,10 @@
+# Runs kuv-update.service every minute.
+[Unit]
+Description=Run the script that fetches updates from the cube GitHub repository
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target

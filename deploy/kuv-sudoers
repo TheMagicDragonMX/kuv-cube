@@ -1,0 +1,5 @@
+# Install as /etc/sudoers.d/kuv (mode 0440). What scripts/update.sh may do as root.
+luna ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload, \
+    /usr/bin/systemctl restart kuv-cube.service, \
+    /usr/bin/systemctl restart kuv-matrix.service, \
+    /usr/bin/systemctl try-restart kuv-setup.service

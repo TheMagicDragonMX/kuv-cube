@@ -2,9 +2,9 @@
 Starts the setup service: `sudo python -m programs.setup`.
 
 It advertises the cube over Bluetooth, shows the PIN on the matrix (through the matrix program)
-while a page is connected, and
-lets that page choose the WiFi network. When the cube ends up online and the page leaves, it hands
-over to `main`: it starts the unit named in KUV_SETUP_HANDOFF, which makes systemd stop this one
+while a page is connected, and lets that page choose the WiFi network. When the cube ends up online
+and the page leaves (or it gets online by itself while no page is connected), it hands over to
+`main`: it starts the unit named in KUV_SETUP_HANDOFF, which makes systemd stop this one
 (see deploy/). Without that setting it simply exits.
 
 Settings come from the environment:
@@ -39,6 +39,12 @@ Where the service reports what it does.
 REPO_DIR = Path(__file__).resolve().parents[2]
 """
 The folder this repository is checked out in.
+"""
+
+ONLINE_CHECK_INTERVAL = 5
+"""
+Seconds between checks for the cube having joined a network on its own (the router was slow at
+boot, or came back later) while no page is connected.
 """
 
 DEFAULT_STATE_DIR = "/var/lib/kuv"
@@ -92,7 +98,18 @@ async def run() -> None:
             await process.wait()
 
         except Exception:
-            logger.exception("Could not check the WiFi after the page left")
+            logger.exception("Could not check the WiFi")
+
+    async def watch_for_network() -> None:
+        """
+        Hands over when the cube gets online without a page, e.g. the router came up after the cube.
+        A connected page is left alone: it hands over when it leaves.
+        """
+        while True:
+            await asyncio.sleep(ONLINE_CHECK_INTERVAL)
+
+            if not bridge.connected:
+                await finish_if_online()
 
     bridge = Bridge(
         dispatcher,
@@ -110,12 +127,17 @@ async def run() -> None:
 
     await server.start(bridge)
 
+    watcher = None if stay else loop.create_task(watch_for_network())
+
     logger.info("Advertising as %s (%s)", name, "PIN needed" if pin else "no PIN")
 
     try:
         await finished.wait()
 
     finally:
+        if watcher is not None:
+            watcher.cancel()
+
         await bridge.close()
         await server.stop()
         await matrix.close()

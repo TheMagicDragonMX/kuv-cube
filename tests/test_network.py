@@ -162,3 +162,40 @@ class NetworkTest(unittest.IsolatedAsyncioTestCase):
             await self.network.forget("Nowhere")
 
         self.assertEqual(raised.exception.code, "bad_request")
+
+    async def test_new_password_for_saved_network_edits_its_profile(self) -> None:
+        """
+        A password for a saved network goes into its profile, and no second profile appears.
+        """
+        await self.network.connect("Home", "newsecret")
+
+        self.assertEqual(list(self.nmcli.profiles), ["netplan-wlan0-Home"])
+        self.assertIn(
+            ("connection", "modify", "netplan-wlan0-Home", "wifi-sec.psk", "newsecret"),
+            self.nmcli.commands,
+        )
+
+    async def test_saved_list_is_reused_until_something_changes(self) -> None:
+        """
+        Reading the status twice lists the profiles once; forgetting a network lists them again.
+        """
+        calls = 0
+        original = self.network.profiles
+
+        async def counting() -> dict[str, str]:
+            nonlocal calls
+            calls += 1
+
+            return await original()
+
+        self.network.profiles = counting  # type: ignore[method-assign]
+
+        await self.network.saved()
+        await self.network.saved()
+
+        self.assertEqual(calls, 1)
+
+        await self.network.forget("Home")
+        await self.network.saved()
+
+        self.assertEqual(calls, 3)
