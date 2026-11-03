@@ -1,0 +1,15 @@
+# Owns the LED panels, from boot, whether or not the cube has WiFi. Setup and main never open the
+# panels themselves: they draw by asking this program (programs/common/matrix_client.py).
+[Unit]
+Description=Kuv LED matrix
+
+[Service]
+WorkingDirectory=/home/luna/kuv/kuv-cube
+# Creates /run/kuv, where the socket lives.
+RuntimeDirectory=kuv
+ExecStart=/home/luna/kuv/venv/bin/python -m programs.matrix
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

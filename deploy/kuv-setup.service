@@ -1,9 +1,10 @@
 # Gets an offline cube onto WiFi over Bluetooth. Starts only when the cube is offline at boot;
 # when a page leaves with the cube online it starts kuv-cube.service (which stops this one).
+# It shows the PIN through kuv-matrix.service.
 [Unit]
 Description=Kuv cube setup (Bluetooth + WiFi onboarding)
-After=network-online.target bluetooth.service NetworkManager.service
-Wants=bluetooth.service
+After=network-online.target bluetooth.service NetworkManager.service kuv-matrix.service
+Wants=bluetooth.service kuv-matrix.service
 
 [Service]
 WorkingDirectory=/home/luna/kuv/kuv-cube
