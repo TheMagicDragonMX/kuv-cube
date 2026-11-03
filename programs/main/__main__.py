@@ -3,6 +3,8 @@ Runs the cube once it is online: `python -m programs.main [program.json | -]`.
 
 With a program (a JSON file, or `-` for the standard input) it runs it and shows it on the LED panels through the
 matrix program, until interrupted. Without one it turns all the LED panels blue.
+
+When the server is configured (see `programs/main/link/settings.py`) it also keeps a live link to it, to receive commands.
 """
 
 import asyncio
@@ -15,6 +17,7 @@ from typing import Any
 from programs.common.matrix_client import MatrixClient
 from programs.common.matrix_protocol import MAIN_PRIORITY, fill
 from programs.main.cube import CubePlayer, EngineError, ProgramError, ScriptError, scene_of, validate_program
+from programs.main.link import CubeLink, default_commands, load_settings
 
 
 logger = logging.getLogger(__name__)
@@ -61,6 +64,15 @@ async def run(program: Any) -> None:
 
     matrix.start()
 
+    settings = load_settings()
+    link = CubeLink(settings, default_commands()) if settings else None
+
+    if link:
+        link.start()
+
+    else:
+        logger.info("No server configured (KUV_SERVER_URL, KUV_CUBE_SECRET): running without the live link")
+
     player = CubePlayer({"on_frame": lambda state: matrix.show(scene_of(state)), "on_error": report})
 
     try:
@@ -74,6 +86,9 @@ async def run(program: Any) -> None:
 
     finally:
         player.dispose()
+
+        if link:
+            await link.close()
 
         await matrix.close()
 

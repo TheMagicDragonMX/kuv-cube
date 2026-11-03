@@ -49,6 +49,20 @@ Trying it on the Pi, with the matrix program running (Ctrl+C to stop):
 
 Without a file, `programs.main` still just paints the panels blue. Tests: `tests/test_cube_*.py`.
 
+## The live link
+
+When the server is configured, `programs.main` keeps a WebSocket open to `kuv-api` (`/ws/cube`) to receive commands and send events. It reconnects by itself (1 s doubling to 30 s), so the server may be down. Without the settings it runs as before, without the link.
+
+Set these in `/etc/kuv/cube.env` (read by `kuv-cube.service`):
+
+```
+KUV_SERVER_URL=ws://192.168.1.20:5038
+KUV_CUBE_SECRET=<same as Cubes__Secret in kuv-api>
+KUV_CUBE_ID=<optional, defaults to /etc/machine-id>
+```
+
+The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/app/cube-link/protocol.ts` and `CubeMessage` in kuv-api). A command is a handler registered in `programs/main/link/commands.py`, which gets the payload and returns the events to send back. For now the only one is `message`, which answers with a mock `reply`. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
+
 ## The setup program
 
 Contract with the web app: `kuv-client/src/app/setup/README.md`.

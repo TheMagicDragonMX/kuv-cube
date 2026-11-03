@@ -9,6 +9,7 @@ This repo is the software that runs on the cube's Raspberry Pi 4: it drives the 
 | `programs/matrix/` | The only code that opens the LED panels (`python -m programs.matrix`). Other programs draw through it |
 | `programs/common/` | Shared by the programs: `matrix_client.py` (how to draw) and `matrix_protocol.py` (the messages) |
 | `programs/main/cube/` | The library that runs the users' programs (JSON from the web app) and shows them on the panels. Layer-by-layer port of `kuv-client/src/app/cube/`, see section 1 |
+| `programs/main/link/` | The live WebSocket to `kuv-api`: commands in, events out. Mirror of `kuv-client/src/app/cube-link/protocol.ts`; change both together |
 | `programs/setup/` | Gets the cube onto WiFi over Bluetooth (`python -m programs.setup`). Everything below is inside it |
 | `programs/setup/protocol.py` | Protocol constants and types. Mirror of `kuv-client/src/app/setup/protocol.ts` |
 | `programs/setup/framing.py` | Cuts messages into Bluetooth-sized chunks and joins them back |

@@ -8,6 +8,8 @@ Wants=network-online.target kuv-matrix.service
 
 [Service]
 WorkingDirectory=/home/luna/kuv/kuv-cube
+# KUV_SERVER_URL, KUV_CUBE_SECRET and optionally KUV_CUBE_ID; without them the cube runs without the live link.
+EnvironmentFile=-/etc/kuv/cube.env
 ExecCondition=/bin/sh -c 'nmcli -t -g STATE general | grep -q "^connected"'
 # Setup is done once the cube is online, so let it go before main starts.
 ExecStartPre=-/usr/bin/systemctl stop kuv-setup.service
