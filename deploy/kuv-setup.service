@@ -8,6 +8,9 @@ Wants=network-online.target bluetooth.service kuv-matrix.service
 
 [Service]
 WorkingDirectory=/home/luna/kuv/kuv-cube
+# All the settings of the cube (PIN, pairing...), see deploy/kuv.env.example.
+EnvironmentFile=-/etc/kuv/kuv.env
+# Not a setting: how setup passes the cube on to main once it is online.
 Environment=KUV_SETUP_HANDOFF=kuv-cube.service
 ExecCondition=/bin/sh -c '! nmcli -t -g STATE general | grep -q "^connected"'
 ExecStart=/home/luna/kuv/venv/bin/python -m programs.setup

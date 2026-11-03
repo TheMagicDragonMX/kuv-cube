@@ -6,7 +6,7 @@ After=network.target
 [Service]
 Type=oneshot
 User=luna
-EnvironmentFile=/etc/kuv/discord.env
+EnvironmentFile=-/etc/kuv/kuv.env
 # A hung git or pip would otherwise keep the timer from ever firing again.
 TimeoutStartSec=300
 ExecStart=/home/luna/kuv/kuv-cube/scripts/update.sh

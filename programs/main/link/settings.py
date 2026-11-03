@@ -1,5 +1,5 @@
 """
-Where the server is and who this cube is. Everything comes from the environment, so the unit file decides.
+Where the server is and who this cube is. Everything comes from the environment, which systemd fills from /etc/kuv/kuv.env (see deploy/kuv.env.example).
 
   KUV_SERVER_URL    base address of the server, e.g. ws://192.168.1.20:5038 (the link is off without it)
   KUV_CUBE_SECRET   the secret the server expects from cubes (`Cubes:Secret` in kuv-api)

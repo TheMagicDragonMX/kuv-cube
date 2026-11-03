@@ -53,15 +53,37 @@ Without a file, `programs.main` still just paints the panels blue. Tests: `tests
 
 When the server is configured, `programs.main` keeps a WebSocket open to `kuv-api` (`/ws/cube`) to receive commands and send events. It reconnects by itself (1 s doubling to 30 s), so the server may be down. Without the settings it runs as before, without the link.
 
-Set these in `/etc/kuv/cube.env` (read by `kuv-cube.service`):
-
-```
-KUV_SERVER_URL=ws://192.168.1.20:5038
-KUV_CUBE_SECRET=<same as Cubes__Secret in kuv-api>
-KUV_CUBE_ID=<optional, defaults to /etc/machine-id>
-```
+Its settings are `KUV_SERVER_URL`, `KUV_CUBE_SECRET` and `KUV_CUBE_ID`, see [Configuration](#configuration).
 
 The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/app/cube-link/protocol.ts` and `CubeMessage` in kuv-api). A command is a handler registered in `programs/main/link/commands.py`, which gets the payload and returns the events to send back. For now the only one is `message`, which answers with a mock `reply`. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
+
+## Configuration
+
+Every setting of the Pi lives in **one file**, `/etc/kuv/kuv.env` (root:root, mode 600, not in git because it holds secrets). Its template, with a comment on every setting, is [`deploy/kuv.env.example`](deploy/kuv.env.example). All the `kuv-*.service` units read it through `EnvironmentFile=-/etc/kuv/kuv.env`, so after editing it you only restart the unit that uses the setting.
+
+```bash
+sudo mkdir -p /etc/kuv && sudo cp deploy/kuv.env.example /etc/kuv/kuv.env
+sudo chmod 600 /etc/kuv/kuv.env && sudo nano /etc/kuv/kuv.env
+```
+
+| Setting | What it is | Default | Used by |
+| --- | --- | --- | --- |
+| `KUV_SERVER_URL` | Address of kuv-api (`ws://host:5038`). No URL, no live link | none | `kuv-cube` |
+| `KUV_CUBE_SECRET` | Secret the server expects from cubes (= `Cubes__Secret` in kuv-api) | none | `kuv-cube` |
+| `KUV_CUBE_ID` | This cube's id, the one users type in the web app | `/etc/machine-id` | `kuv-cube` |
+| `KUV_SETUP_PIN` | PIN for the Bluetooth setup; empty turns it off | generated, 4 digits | `kuv-setup` |
+| `KUV_STATE_DIR` | Where the cube remembers the generated PIN (`setup-pin`) | `/var/lib/kuv` | `kuv-setup` |
+| `KUV_SETUP_STAY` | `1` = setup keeps running after the cube is online | off | `kuv-setup` |
+| `KUV_SETUP_PAIRING` | `1` = require Bluetooth pairing | off | `kuv-setup` |
+| `KUV_FONT_DIR` | BDF fonts folder, used to draw the PIN | `/home/luna/rpi-rgb-led-matrix/fonts` | `kuv-matrix` |
+| `DISCORD_WEBHOOK_URL` | Webhook for the boot and "code updated" messages | none | `kuv-discord-boot`, `kuv-update` |
+| `DISCORD_WEBHOOK_SHUTDOWN_URL` | Webhook for the shutdown message | none | `kuv-discord-shutdown` |
+
+Not in this file on purpose: `KUV_SETUP_HANDOFF` (wiring between two units, set in `kuv-setup.service`), the hardware tuning of the panels (rows, brightness, GPIO slowdown: constants in `programs/matrix/screen.py`), the folder paths (`REPO_DIR`, `VENV_DIR` in `scripts/update.sh` and the units) and the secrets of the API (those are `Jwt__Key`, `Cubes__Secret` and the database string, in `kuv-api`'s own environment).
+
+To run a program by hand with the same settings: `sudo bash -c 'set -a; . /etc/kuv/kuv.env; set +a; exec /home/luna/kuv/venv/bin/python -m programs.main'`.
+
+**Migrating from the old files:** the Discord webhooks used to be in `/etc/kuv/discord.env`. Move them into `kuv.env` (`sudo sh -c 'cat /etc/kuv/discord.env >> /etc/kuv/kuv.env'`) or the Discord alerts stop. Then `sudo cp deploy/*.service /etc/systemd/system/ && sudo systemctl daemon-reload`.
 
 ## The setup program
 
@@ -79,7 +101,7 @@ Contract with the web app: `kuv-client/src/app/setup/README.md`.
 | `programs/setup/identity.py` | The name (`Kuv-XXXX`), the PIN and the version |
 | `programs/setup/display.py` | Shows the PIN on the matrix, through the matrix program |
 
-The PIN (4 digits, unlimited attempts) is generated on first run and kept in `/var/lib/kuv/setup-pin`. Read it with `sudo cat /var/lib/kuv/setup-pin` if the matrix is unavailable. Environment variables (set in the unit): `KUV_SETUP_PIN` (override, empty turns it off), `KUV_STATE_DIR`, `KUV_SETUP_STAY=1` (do not hand over after setup), `KUV_SETUP_PAIRING=1` (require Bluetooth pairing, encrypts the link), `KUV_FONT_DIR` (read by the matrix program: where the BDF fonts are).
+The PIN (4 digits, unlimited attempts) is generated on first run and kept in `/var/lib/kuv/setup-pin`. Read it with `sudo cat /var/lib/kuv/setup-pin` if the matrix is unavailable. Its settings (`KUV_SETUP_PIN`, `KUV_STATE_DIR`, `KUV_SETUP_STAY`, `KUV_SETUP_PAIRING`) are in [Configuration](#configuration).
 
 System packages the Pi needs: `bluez` and `network-manager` (both default on Raspberry Pi OS Bookworm). The setup service runs as root because of `nmcli` and Bluetooth; the matrix program runs as root because of the GPIO.
 
@@ -110,7 +132,7 @@ Everything kuv-related on the Pi, and where it lives:
 ├── kuv-cube/                 # this repo, cloned from TheMagicDragonMX/kuv-cube (branch dev)
 └── venv/                     # Python venv, kept outside the repo
 /home/luna/rpi-rgb-led-matrix/   # LED matrix library (installed into the venv by requirements.txt)
-/etc/kuv/discord.env             # Discord webhook URLs (root:root, mode 600, NOT in git)
+/etc/kuv/kuv.env                 # ALL the settings and secrets (root:root, mode 600, NOT in git)
 /etc/sudoers.d/kuv               # lets luna restart kuv-cube.service without a password
 /etc/systemd/system/
 ├── kuv-matrix.service           # runs python -m programs.matrix, always; the only one that opens the panels
@@ -130,17 +152,6 @@ Everything kuv-related on the Pi, and where it lives:
 - Because the update script lives in this repo, it updates itself on the next pull.
 - Paths are hardcoded in `kuv-cube.service` and `scripts/update.sh` (`REPO_DIR`, `VENV_DIR`).
   If you move folders, edit both.
-
-### Discord webhooks
-
-`/etc/kuv/discord.env` holds the secrets, read by systemd through `EnvironmentFile=`:
-
-```
-DISCORD_WEBHOOK_URL=...            # boot + update messages
-DISCORD_WEBHOOK_SHUTDOWN_URL=...   # shutdown message
-```
-
-Never commit these. To rotate: edit the file, nothing else needs to change (units read it on each run).
 
 ### Useful commands
 

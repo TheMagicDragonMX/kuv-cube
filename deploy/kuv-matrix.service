@@ -5,6 +5,8 @@ Description=Kuv LED matrix
 
 [Service]
 WorkingDirectory=/home/luna/kuv/kuv-cube
+# All the settings of the cube (fonts folder), see deploy/kuv.env.example.
+EnvironmentFile=-/etc/kuv/kuv.env
 # Creates /run/kuv, where the socket lives.
 RuntimeDirectory=kuv
 ExecStart=/home/luna/kuv/venv/bin/python -m programs.matrix

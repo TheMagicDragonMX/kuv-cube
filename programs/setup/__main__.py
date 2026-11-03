@@ -7,7 +7,7 @@ and the page leaves (or it gets online by itself while no page is connected), it
 `main`: it starts the unit named in KUV_SETUP_HANDOFF, which makes systemd stop this one
 (see deploy/). Without that setting it simply exits.
 
-Settings come from the environment:
+Settings come from the environment, which systemd fills from /etc/kuv/kuv.env (see deploy/kuv.env.example):
   KUV_SETUP_PIN    use this PIN instead of the generated one; empty turns the PIN off
   KUV_STATE_DIR    where the PIN is remembered (default /var/lib/kuv)
   KUV_SETUP_STAY   set to 1 to keep running even after the cube is online

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Checks GitHub for new commits on `dev` and updates the cube when there are some.
-# Run by kuv-update.timer (as user luna). DISCORD_WEBHOOK_URL comes from /etc/kuv/discord.env.
+# Run by kuv-update.timer (as user luna). DISCORD_WEBHOOK_URL comes from /etc/kuv/kuv.env.
 # Only the programs whose code changed are restarted (see deploy/kuv-sudoers for what luna may do).
 
 REPO_DIR="/home/luna/kuv/kuv-cube"

@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-EnvironmentFile=/etc/kuv/discord.env
+EnvironmentFile=-/etc/kuv/kuv.env
 ExecStart=-/usr/bin/curl -sS -m 10 -H "Content-Type: application/json" -X POST -d "{\"embeds\": [{\"title\": \"🍒 Rasbperry Pi\", \"description\": \"The `Pi` is _fucking_ running 😼\", \"color\": 5763719 }]}" ${DISCORD_WEBHOOK_URL}
 
 [Install]
