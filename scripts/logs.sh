@@ -1,6 +1,7 @@
 #!/bin/bash
 # Streams the Kuv cube's logs to THIS terminal. Run it on your laptop, not on the Pi: it connects to
-# the Pi with ssh (the same `ssh pi` you already use) and shows what the programs write down.
+# the Pi with ssh (the same `ssh pi` you already use) and shows what the programs write down, one
+# tidy line per event (needs python3 here).
 #
 #   ./scripts/logs.sh                 follow all three programs, starting with the last 50 lines
 #   ./scripts/logs.sh setup           only the setup program (matrix | setup | main)
@@ -21,7 +22,7 @@ COLOR=1
 UNITS=()
 
 usage() {
-    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -53,7 +54,7 @@ if ! [[ "$LINES_BACK" =~ ^[0-9]+$ ]]; then
 fi
 
 # Build the journalctl command that runs on the Pi.
-REMOTE="journalctl --no-hostname --output=short"
+REMOTE="journalctl --output=json"
 
 for unit in "${UNITS[@]}"; do
     REMOTE+=" -u $unit"
@@ -74,25 +75,22 @@ else
     REMOTE+=" --no-pager"
 fi
 
-# Colors: one per program, red for warnings and errors.
-paint() {
-    if [ "$COLOR" -eq 1 ] && [ -t 1 ]; then
-        local esc=$'\033'
-        sed -u -E \
-            -e "s/\r$//" \
-            -e "s/(kuv-matrix)(\[[0-9]+\])/${esc}[36m\1\2${esc}[0m/" \
-            -e "s/(kuv-setup)(\[[0-9]+\])/${esc}[35m\1\2${esc}[0m/" \
-            -e "s/(kuv-main)(\[[0-9]+\])/${esc}[32m\1\2${esc}[0m/" \
-            -e "s/(WARNING .*)$/${esc}[33m\1${esc}[0m/" \
-            -e "s/((ERROR|CRITICAL) .*)$/${esc}[31m\1${esc}[0m/"
-    else
-        sed -u -e "s/\r$//"
-    fi
-}
+# While following, ssh puts this terminal in "raw" mode (so Ctrl+C reaches the Pi), where a new line
+# moves down without going back to the left edge. Ending every line with a carriage return keeps the
+# lines from stepping to the right.
+FORMAT=("$(dirname "$0")/format_logs.py")
+
+if [ "$FOLLOW" -eq 1 ] && [ -t 0 ]; then
+    FORMAT+=(--cr)
+fi
+
+if [ "$COLOR" -eq 0 ] || ! [ -t 1 ]; then
+    FORMAT+=(--no-color)
+fi
 
 echo "Connecting to $HOST... (Ctrl+C to stop)" >&2
 
-"${SSH[@]}" "$HOST" "$REMOTE" | paint
+"${SSH[@]}" "$HOST" "$REMOTE" | python3 "${FORMAT[@]}"
 STATUS=${PIPESTATUS[0]}
 
 # 255 is ssh itself failing (no network, wrong name); a followed log only ends on Ctrl+C.
