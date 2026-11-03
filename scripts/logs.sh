@@ -10,6 +10,7 @@
 #   ./scripts/logs.sh -b              start from the last boot instead
 #   ./scripts/logs.sh -s              print what is there and stop, without following
 #   ./scripts/logs.sh -p              no colors
+#   ./scripts/logs.sh -d              debug: show what ssh is doing, if it seems stuck
 #
 # Another Pi or another ssh name: KUV_HOST=other-name ./scripts/logs.sh
 # Press Ctrl+C to stop.
@@ -19,10 +20,11 @@ LINES_BACK=50
 SINCE_BOOT=0
 FOLLOW=1
 COLOR=1
+DEBUG=0
 UNITS=()
 
 usage() {
-    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -37,6 +39,7 @@ while [ $# -gt 0 ]; do
         -b)        SINCE_BOOT=1 ;;
         -s)        FOLLOW=0 ;;
         -p)        COLOR=0 ;;
+        -d)        DEBUG=1 ;;
         -h|--help) usage 0 ;;
         *)         echo "Unknown option: $1" >&2; usage 1 ;;
     esac
@@ -54,7 +57,8 @@ if ! [[ "$LINES_BACK" =~ ^[0-9]+$ ]]; then
 fi
 
 # Build the journalctl command that runs on the Pi.
-REMOTE="journalctl --output=json"
+# The first line tells the formatter that the connection works, even before any log arrives.
+REMOTE="echo '{\"CONNECTED\": true}'; journalctl --output=json"
 
 for unit in "${UNITS[@]}"; do
     REMOTE+=" -u $unit"
@@ -66,7 +70,13 @@ else
     REMOTE+=" -n $LINES_BACK"
 fi
 
-SSH=(ssh -o ConnectTimeout=8 -o ServerAliveInterval=15 -o LogLevel=ERROR)
+SSH=(ssh -o ConnectTimeout=8 -o ServerAliveInterval=15)
+
+if [ "$DEBUG" -eq 1 ]; then
+    SSH+=(-v)
+else
+    SSH+=(-o LogLevel=ERROR)
+fi
 
 if [ "$FOLLOW" -eq 1 ]; then
     REMOTE+=" -f"

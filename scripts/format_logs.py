@@ -178,6 +178,12 @@ def main() -> None:
             except ValueError:
                 continue
 
+            if entry.get("CONNECTED"):
+                sys.stdout.write(paint("Connected to the Pi. Waiting for logs...", DIM, color) + ending)
+                sys.stdout.flush()
+
+                continue
+
             moment = datetime.fromtimestamp(int(entry.get("__REALTIME_TIMESTAMP", 0)) / 1_000_000)
 
             if moment.date() != day:

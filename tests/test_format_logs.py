@@ -84,3 +84,17 @@ class FormatLogsTest(unittest.TestCase):
         The journal sends non-text messages as lists of byte values.
         """
         self.assertIn("hi", format_logs.render(entry(list(b"INFO x: hi")), False))
+
+    def test_connection_marker_is_announced(self) -> None:
+        """
+        The line logs.sh sends first, before any log, is turned into a "Connected" message.
+        """
+        import subprocess
+        import sys
+
+        result = subprocess.run(
+            [sys.executable, str(Path(SPEC.origin)), "--no-color"],
+            input='{"CONNECTED": true}\n', capture_output=True, text=True, timeout=10,
+        )
+
+        self.assertIn("Connected to the Pi", result.stdout)
