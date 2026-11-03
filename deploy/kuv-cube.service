@@ -7,6 +7,8 @@ After=network-online.target NetworkManager.service kuv-matrix.service
 Wants=kuv-matrix.service
 
 [Service]
+# Names this program's lines in the logs (see scripts/logs.sh).
+SyslogIdentifier=kuv-main
 WorkingDirectory=/home/luna/kuv/kuv-cube
 ExecCondition=/bin/sh -c 'nmcli -t -g STATE general | grep -q "^connected"'
 # Setup is done once the cube is online, so let it go before main starts.

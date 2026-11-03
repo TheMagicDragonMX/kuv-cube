@@ -9,8 +9,15 @@ import asyncio
 import logging
 import signal
 
+from programs.common.logs import configure_logging
 from programs.matrix.screen import Screen
 from programs.matrix.server import MatrixServer
+
+
+logger = logging.getLogger(__name__)
+"""
+Where this program reports what it does.
+"""
 
 
 async def run() -> None:
@@ -21,6 +28,8 @@ async def run() -> None:
 
     screen.open()
 
+    logger.info("Panels opened")
+
     server = MatrixServer(screen)
     finished = asyncio.Event()
 
@@ -29,10 +38,14 @@ async def run() -> None:
 
     await server.start()
 
+    logger.info("Listening for programs to draw")
+
     try:
         await finished.wait()
 
     finally:
+        logger.info("Stopping")
+
         await server.stop()
 
 
@@ -40,7 +53,7 @@ def main() -> None:
     """
     Sets up logging and runs the program.
     """
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    configure_logging()
     asyncio.run(run())
 
 

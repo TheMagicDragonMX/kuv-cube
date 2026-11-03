@@ -3,6 +3,7 @@ WiFi control through NetworkManager (nmcli), shaped like the setup protocol's an
 """
 
 import asyncio
+import logging
 import re
 from pathlib import Path
 
@@ -21,6 +22,11 @@ from programs.setup.protocol import (
     WifiStatus,
 )
 
+
+logger = logging.getLogger(__name__)
+"""
+Where this module reports what it does.
+"""
 
 CONNECT_TIMEOUT = 45
 """
@@ -200,6 +206,8 @@ class Network:
 
         ordered = sorted(networks.values(), key=lambda network: -network["signal"])
 
+        logger.info("Scan found %d networks", len(ordered))
+
         return {"networks": ordered}
 
     async def profiles(self) -> dict[str, str]:
@@ -306,6 +314,8 @@ class Network:
             self._connecting_ssid = ssid
             self._failed = False
 
+            logger.info("Joining %s%s", ssid, " (saved)" if saved_names and not password else "")
+
             try:
                 if saved_names and not password:
                     await run_nmcli(
@@ -324,8 +334,10 @@ class Network:
 
                     await run_nmcli(*command, timeout=CONNECT_TIMEOUT + 5)
 
-            except ProtocolError:
+            except ProtocolError as error:
                 self._failed = True
+
+                logger.warning("Could not join %s: %s", ssid, error.message)
 
                 await self._recover(before, previous)
 
@@ -333,6 +345,8 @@ class Network:
 
             finally:
                 self._connecting_ssid = None
+
+        logger.info("Joined %s", ssid)
 
         return await self.wifi_status()
 
@@ -352,6 +366,8 @@ class Network:
             if previous_names:
                 await run_nmcli("connection", "up", previous_names[0], timeout=CONNECT_TIMEOUT)
 
+                logger.info("Went back to %s", previous)
+
         except ProtocolError:
             pass
 
@@ -370,3 +386,5 @@ class Network:
         # `connection delete` also takes the connection down when it is active.
         for name in names:
             await run_nmcli("connection", "delete", name)
+
+        logger.info("Forgot %s", ssid)

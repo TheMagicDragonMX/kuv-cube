@@ -23,6 +23,7 @@ Programs draw by sending the matrix program a "scene" (see `programs/common/matr
 | `programs/setup/` | Bluetooth + WiFi onboarding, run with `python -m programs.setup` by `kuv-setup.service`. See below |
 | `programs/main/` | Everything the cube does once online, run with `python -m programs.main` by `kuv-cube.service` |
 | `programs/common/` | What the programs share: the client and message format for talking to the matrix program |
+| `scripts/logs.sh` | Run on your laptop: streams the Pi's logs to your terminal |
 | `deploy/` | The systemd units for the programs above (copy to `/etc/systemd/system/`) |
 | `tests/` | `python3 -m unittest` |
 | `scripts/update.sh` | Auto-update script run by `kuv-update.timer` |
@@ -55,6 +56,19 @@ sudo /home/luna/kuv/venv/bin/python -m programs.setup      # from /home/luna/kuv
 ```
 
 (the matrix program must be running for the PIN to appear on the panels), then open the setup page in Chrome, pick `Kuv-XXXX`, and enter the PIN. Run `python3 -m unittest` to test everything that does not need the radio.
+
+### Watching the cube from your laptop
+
+`scripts/logs.sh` streams what the programs write down to your laptop's terminal. Run it on the laptop, not on the Pi: it uses `ssh pi`, so the laptop and the Pi must be on the same network.
+
+```bash
+./scripts/logs.sh              # follow all three programs, starting with the last 50 lines
+./scripts/logs.sh setup        # only one: matrix, setup or main (also: bluetooth, wifi)
+./scripts/logs.sh -b           # start from the last boot
+./scripts/logs.sh -s -n 200    # print the last 200 lines and stop
+```
+
+Each program has its own color. The Pi keeps the logs across reboots, so after a setup done while the Pi had no network you can read what happened (`./scripts/logs.sh -b setup`). Programs log what they do through `programs/common/logs.py`; never log secrets such as WiFi passwords or the PIN a page sent.
 
 ### Installing the units
 
