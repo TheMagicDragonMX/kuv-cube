@@ -2,11 +2,11 @@
 
 Software for the Kuv cube on a Raspberry Pi. It has two programs that take turns:
 
-1. **`setup/`**: runs while the cube is offline. It advertises over Bluetooth, shows a PIN on the LED matrix, and lets the setup page of the web app choose a WiFi network.
-2. **`main/`**: runs once the cube is online. It drives the LED matrix and talks to the web app.
+1. **`programs/setup/`**: runs while the cube is offline. It advertises over Bluetooth, shows a PIN on the LED matrix, and lets the setup page of the web app choose a WiFi network.
+2. **`programs/main/`**: runs once the cube is online. It drives the LED matrix and talks to the web app.
 
 ```
-boot ─┬─ offline ──► kuv-setup.service (python -m setup) ── page connects the cube to WiFi ──┐
+boot ─┬─ offline ──► kuv-setup.service (python -m programs.setup) ── page connects the cube to WiFi ──┐
       └─ online ───► kuv-cube.service  (python -m main)  ◄────────────────────────────────────┘
 ```
 
@@ -14,8 +14,8 @@ boot ─┬─ offline ──► kuv-setup.service (python -m setup) ── page
 
 | Path | What it is |
 |---|---|
-| `setup/` | Bluetooth + WiFi onboarding, run with `python -m setup` by `kuv-setup.service`. See below |
-| `main/` | Everything the cube does once online, run with `python -m main` by `kuv-cube.service` |
+| `programs/setup/` | Bluetooth + WiFi onboarding, run with `python -m programs.setup` by `kuv-setup.service`. See below |
+| `programs/main/` | Everything the cube does once online, run with `python -m programs.main` by `kuv-cube.service` |
 | `deploy/` | The systemd units for the two programs above (copy to `/etc/systemd/system/`) |
 | `tests/` | `python3 -m unittest` |
 | `scripts/update.sh` | Auto-update script run by `kuv-update.timer` |
@@ -27,24 +27,24 @@ Contract with the web app: `kuv-client/src/app/setup/README.md`.
 
 | File | The one thing it does |
 | --- | --- |
-| `setup/__main__.py` | Wires everything together and runs the service |
-| `setup/gatt.py` | The BlueZ side: GATT service, advertisement, disconnect watcher |
-| `setup/bridge.py` | Per-page state, chunks in and out, status events |
-| `setup/dispatcher.py` | PIN, lockout, and one handler per operation |
-| `setup/network.py` | WiFi through NetworkManager (`nmcli`) |
-| `setup/framing.py` | Cuts messages into chunks and joins them back |
-| `setup/protocol.py` | UUIDs, error codes and types, mirror of `protocol.ts` |
-| `setup/identity.py` | The name (`Kuv-XXXX`), the PIN and the version |
-| `setup/display.py` | Shows the PIN on the matrix |
+| `programs/setup/__main__.py` | Wires everything together and runs the service |
+| `programs/setup/gatt.py` | The BlueZ side: GATT service, advertisement, disconnect watcher |
+| `programs/setup/bridge.py` | Per-page state, chunks in and out, status events |
+| `programs/setup/dispatcher.py` | PIN and one handler per operation |
+| `programs/setup/network.py` | WiFi through NetworkManager (`nmcli`) |
+| `programs/setup/framing.py` | Cuts messages into chunks and joins them back |
+| `programs/setup/protocol.py` | UUIDs, error codes and types, mirror of `protocol.ts` |
+| `programs/setup/identity.py` | The name (`Kuv-XXXX`), the PIN and the version |
+| `programs/setup/display.py` | Shows the PIN on the matrix |
 
-The PIN is generated on first run and kept in `/var/lib/kuv/setup-pin`. Read it with `sudo cat /var/lib/kuv/setup-pin` if the matrix is unavailable. Environment variables (set in the unit): `KUV_SETUP_PIN` (override, empty turns it off), `KUV_STATE_DIR`, `KUV_SETUP_STAY=1` (do not hand over after setup), `KUV_SETUP_PAIRING=1` (require Bluetooth pairing, encrypts the link), `KUV_FONT`, `KUV_SETUP_DISPLAY=0` (never touch the matrix, for testing next to a running cube).
+The PIN (4 digits, unlimited attempts) is generated on first run and kept in `/var/lib/kuv/setup-pin`. Read it with `sudo cat /var/lib/kuv/setup-pin` if the matrix is unavailable. Environment variables (set in the unit): `KUV_SETUP_PIN` (override, empty turns it off), `KUV_STATE_DIR`, `KUV_SETUP_STAY=1` (do not hand over after setup), `KUV_SETUP_PAIRING=1` (require Bluetooth pairing, encrypts the link), `KUV_FONT`, `KUV_SETUP_DISPLAY=0` (never touch the matrix, for testing next to a running cube).
 
 System packages the Pi needs: `bluez` and `network-manager` (both default on Raspberry Pi OS Bookworm). The setup service runs as root because it uses the LED matrix and `nmcli`.
 
 ### Trying it
 
 ```bash
-sudo /home/luna/kuv/venv/bin/python -m setup      # from /home/luna/kuv/kuv-cube; Ctrl+C to stop
+sudo /home/luna/kuv/venv/bin/python -m programs.setup      # from /home/luna/kuv/kuv-cube; Ctrl+C to stop
 ```
 
 then open the setup page in Chrome, pick `Kuv-XXXX`, and enter the PIN. Run `python3 -m unittest` to test everything that does not need the radio.
@@ -71,7 +71,7 @@ Everything kuv-related on the Pi, and where it lives:
 /etc/kuv/discord.env             # Discord webhook URLs (root:root, mode 600, NOT in git)
 /etc/sudoers.d/kuv               # lets luna restart kuv-cube.service without a password
 /etc/systemd/system/
-├── kuv-setup.service            # runs python -m setup, only when the cube is offline at boot
+├── kuv-setup.service            # runs python -m programs.setup, only when the cube is offline at boot
 ├── kuv-cube.service             # runs python -m main, only when the cube is online
 ├── kuv-update.service           # runs scripts/update.sh
 ├── kuv-update.timer             # triggers kuv-update.service 1 min after boot, then every minute

@@ -75,7 +75,8 @@ The operation needs `auth` first, or the PIN was wrong.
 
 ERROR_LOCKED = "locked"
 """
-Too many wrong PINs; `auth` is refused for a while.
+Too many wrong PINs. Never sent today (wrong PINs can be retried freely); kept because the web
+app's protocol.ts still lists it.
 """
 
 ERROR_BAD_REQUEST = "bad_request"

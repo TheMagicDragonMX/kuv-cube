@@ -1,12 +1,12 @@
 """
-Runs the cube once it is online. Run with sudo: `sudo python -m main`.
+Runs the cube once it is online. Run with sudo: `sudo python -m programs.main`.
 
 For now it turns all the LED panels blue.
 """
 
 import time
 
-from main.matrix import create_matrix
+from programs.common.matrix import create_matrix
 
 
 def main() -> None:

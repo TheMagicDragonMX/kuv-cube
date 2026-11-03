@@ -6,8 +6,8 @@ import asyncio
 import unittest
 from typing import Any
 
-from setup.dispatcher import MAX_PIN_ATTEMPTS, Dispatcher, Session
-from setup.protocol import ERROR_WIFI_FAILED, ProtocolError
+from programs.setup.dispatcher import Dispatcher, Session
+from programs.setup.protocol import ERROR_WIFI_FAILED, ProtocolError
 
 
 class FakeNetwork:
@@ -60,9 +60,8 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         """
-        A dispatcher with PIN 1234, a fake network, a fake clock and a recorded reboot.
+        A dispatcher with PIN 1234, a fake network and a recorded reboot.
         """
-        self.now = 0.0
         self.rebooted = asyncio.Event()
         self.network = FakeNetwork()
         self.session = Session()
@@ -76,7 +75,6 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
             "0.0.0",
             "1234",
             reboot=reboot,
-            clock=lambda: self.now,
         )
 
     async def ask(self, operation: str, params: Any = None, request_id: int = 1) -> dict:
@@ -117,24 +115,16 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(allowed["ok"])
 
-    async def test_wrong_pin_then_lockout(self) -> None:
+    async def test_wrong_pins_can_be_retried_forever(self) -> None:
         """
-        Too many wrong PINs lock `auth`, even for the right one, until the lockout ends.
+        Any number of wrong PINs is refused one by one, and the right one still works afterwards.
         """
-        for _ in range(MAX_PIN_ATTEMPTS - 1):
+        for _ in range(50):
             response = await self.ask("auth", {"pin": "0000"})
 
             self.assertEqual(response["error"]["code"], "unauthorized")
 
-        locking = await self.ask("auth", {"pin": "0000"})
-        self.assertEqual(locking["error"]["code"], "locked")
-
-        still_locked = await self.ask("auth", {"pin": "1234"})
-        self.assertEqual(still_locked["error"]["code"], "locked")
-
-        self.now += 61
-        unlocked = await self.ask("auth", {"pin": "1234"})
-        self.assertTrue(unlocked["ok"])
+        self.assertTrue((await self.ask("auth", {"pin": "1234"}))["ok"])
 
     async def test_connect_validates_params(self) -> None:
         """

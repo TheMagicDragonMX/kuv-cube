@@ -5,8 +5,8 @@ Tests for the NetworkManager wrapper, against a scripted nmcli that answers like
 import unittest
 from unittest import mock
 
-from setup.network import Network, split_terse
-from setup.protocol import ERROR_WIFI_FAILED, ProtocolError
+from programs.setup.network import Network, split_terse
+from programs.setup.protocol import ERROR_WIFI_FAILED, ProtocolError
 
 
 class FakeNmcli:
@@ -93,7 +93,7 @@ class NetworkTest(unittest.IsolatedAsyncioTestCase):
         Patches nmcli with the fake.
         """
         self.nmcli = FakeNmcli()
-        patcher = mock.patch("setup.network.run_nmcli", self.nmcli)
+        patcher = mock.patch("programs.setup.network.run_nmcli", self.nmcli)
 
         patcher.start()
         self.addCleanup(patcher.stop)

@@ -22,8 +22,8 @@ from dbus_next import Message, MessageType
 from dbus_next.aio import MessageBus
 from dbus_next.errors import DBusError
 
-from setup.bridge import Bridge
-from setup.protocol import RX_CHARACTERISTIC_UUID, SERVICE_UUID, TX_CHARACTERISTIC_UUID
+from programs.setup.bridge import Bridge
+from programs.setup.protocol import RX_CHARACTERISTIC_UUID, SERVICE_UUID, TX_CHARACTERISTIC_UUID
 
 
 REQUIRE_PAIRING = os.environ.get("KUV_SETUP_PAIRING") == "1"

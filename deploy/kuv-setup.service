@@ -9,7 +9,7 @@ Wants=bluetooth.service
 WorkingDirectory=/home/luna/kuv/kuv-cube
 Environment=KUV_SETUP_HANDOFF=kuv-cube.service
 ExecCondition=/bin/sh -c '! nmcli -t -g STATE general | grep -q "^connected"'
-ExecStart=/home/luna/kuv/venv/bin/python -m setup
+ExecStart=/home/luna/kuv/venv/bin/python -m programs.setup
 Restart=on-failure
 RestartSec=5
 

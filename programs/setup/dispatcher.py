@@ -1,5 +1,5 @@
 """
-Answers the setup requests: PIN, lockout and the routing of each operation.
+Answers the setup requests: PIN and the routing of each operation.
 
 It knows nothing about Bluetooth: it takes a decoded request and returns the response to send
 back, so it can be tested without a radio.
@@ -8,15 +8,13 @@ back, so it can be tested without a radio.
 import asyncio
 import hmac
 import socket
-import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from setup.network import Network, system_status
-from setup.protocol import (
+from programs.setup.network import Network, system_status
+from programs.setup.protocol import (
     ERROR_BAD_REQUEST,
     ERROR_INTERNAL,
-    ERROR_LOCKED,
     ERROR_UNAUTHORIZED,
     ERROR_UNKNOWN_OP,
     PROTOCOL_VERSION,
@@ -25,16 +23,6 @@ from setup.protocol import (
     ProtocolError,
 )
 
-
-MAX_PIN_ATTEMPTS = 5
-"""
-Wrong PINs in a row before `auth` is refused.
-"""
-
-LOCK_SECONDS = 60
-"""
-How long `auth` is refused after too many wrong PINs.
-"""
 
 REBOOT_DELAY = 1
 """
@@ -83,7 +71,6 @@ class Dispatcher:
         version: str,
         pin: str | None,
         reboot: Callable[[], Awaitable[None]] = reboot_system,
-        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         """
         Sets up a cube called `name`; without a `pin` no operation needs `auth`.
@@ -111,21 +98,6 @@ class Dispatcher:
         self._reboot = reboot
         """
         Reboots the Pi; replaced in tests.
-        """
-
-        self._clock = clock
-        """
-        Seconds on a steady clock; replaced in tests.
-        """
-
-        self._failed_attempts = 0
-        """
-        Wrong PINs since the last good one.
-        """
-
-        self._locked_until = 0.0
-        """
-        When the lockout ends, on the clock's scale.
         """
 
         self._reboot_task: asyncio.Task | None = None
@@ -223,7 +195,7 @@ class Dispatcher:
 
     async def _auth(self, session: Session, params: dict[str, Any]) -> None:
         """
-        Operation `auth`: unlocks the session when the PIN matches.
+        Operation `auth`: unlocks the session when the PIN matches. Wrong PINs can be retried freely.
         """
         pin = params.get("pin")
 
@@ -235,22 +207,10 @@ class Dispatcher:
 
             return None
 
-        if self._clock() < self._locked_until:
-            raise ProtocolError(ERROR_LOCKED, "Too many wrong PINs, try again later")
-
         if hmac.compare_digest(pin.encode(), self._pin.encode()):
-            self._failed_attempts = 0
             session.authenticated = True
 
             return None
-
-        self._failed_attempts += 1
-
-        if self._failed_attempts >= MAX_PIN_ATTEMPTS:
-            self._failed_attempts = 0
-            self._locked_until = self._clock() + LOCK_SECONDS
-
-            raise ProtocolError(ERROR_LOCKED, "Too many wrong PINs, try again later")
 
         raise ProtocolError(ERROR_UNAUTHORIZED, "Wrong PIN")
 

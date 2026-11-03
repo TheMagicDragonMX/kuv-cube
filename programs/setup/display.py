@@ -107,7 +107,7 @@ class PinDisplay:
         """
         if self._matrix is None and not self._unavailable:
             try:
-                from main.matrix import create_matrix
+                from programs.common.matrix import create_matrix
 
                 self._matrix = create_matrix()
 

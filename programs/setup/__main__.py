@@ -1,5 +1,5 @@
 """
-Starts the setup service: `sudo python -m setup`.
+Starts the setup service: `sudo python -m programs.setup`.
 
 It advertises the cube over Bluetooth, shows the PIN on the matrix while a page is connected, and
 lets that page choose the WiFi network. When the cube ends up online and the page leaves, it hands
@@ -19,21 +19,21 @@ import os
 import signal
 from pathlib import Path
 
-from setup.bridge import Bridge
-from setup.dispatcher import Dispatcher
-from setup.display import PinDisplay
-from setup.gatt import GattServer
-from setup.identity import cube_name, load_pin, software_version
-from setup.network import Network
-from setup.protocol import WIFI_CONNECTED
+from programs.setup.bridge import Bridge
+from programs.setup.dispatcher import Dispatcher
+from programs.setup.display import PinDisplay
+from programs.setup.gatt import GattServer
+from programs.setup.identity import cube_name, load_pin, software_version
+from programs.setup.network import Network
+from programs.setup.protocol import WIFI_CONNECTED
 
 
-logger = logging.getLogger("setup")
+logger = logging.getLogger("programs.setup")
 """
 Where the service reports what it does.
 """
 
-REPO_DIR = Path(__file__).resolve().parent.parent
+REPO_DIR = Path(__file__).resolve().parents[2]
 """
 The folder this repository is checked out in.
 """

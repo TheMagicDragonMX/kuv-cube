@@ -8,7 +8,7 @@ import socket
 import subprocess
 from pathlib import Path
 
-from setup.protocol import DEVICE_NAME_PREFIX
+from programs.setup.protocol import DEVICE_NAME_PREFIX
 
 
 MACHINE_ID_PATH = Path("/etc/machine-id")
@@ -16,7 +16,7 @@ MACHINE_ID_PATH = Path("/etc/machine-id")
 Identifier systemd creates once per installation; it makes the name stable and unique.
 """
 
-PIN_LENGTH = 6
+PIN_LENGTH = 4
 """
 Digits in a generated PIN.
 """

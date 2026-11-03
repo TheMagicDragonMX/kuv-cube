@@ -9,7 +9,7 @@ newline, cut into chunks; the other side joins chunks until it sees the newline.
 import json
 from typing import Any
 
-from setup.protocol import DEFAULT_CHUNK_SIZE, MAX_MESSAGE_SIZE
+from programs.setup.protocol import DEFAULT_CHUNK_SIZE, MAX_MESSAGE_SIZE
 
 
 NEWLINE = b"\n"

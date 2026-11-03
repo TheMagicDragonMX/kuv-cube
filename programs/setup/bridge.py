@@ -12,9 +12,9 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from setup.dispatcher import Dispatcher, Session
-from setup.framing import MessageDecoder, encode_message
-from setup.protocol import DEFAULT_CHUNK_SIZE, STATUS_EVENT_INTERVAL
+from programs.setup.dispatcher import Dispatcher, Session
+from programs.setup.framing import MessageDecoder, encode_message
+from programs.setup.protocol import DEFAULT_CHUNK_SIZE, STATUS_EVENT_INTERVAL
 
 
 logger = logging.getLogger(__name__)

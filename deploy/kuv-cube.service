@@ -9,7 +9,7 @@ WorkingDirectory=/home/luna/kuv/kuv-cube
 ExecCondition=/bin/sh -c 'nmcli -t -g STATE general | grep -q "^connected"'
 # Setup and the cube both need the LED matrix, so setup must let go of it first.
 ExecStartPre=-/usr/bin/systemctl stop kuv-setup.service
-ExecStart=/home/luna/kuv/venv/bin/python -m main
+ExecStart=/home/luna/kuv/venv/bin/python -m programs.main
 Restart=on-failure
 RestartSec=5
 

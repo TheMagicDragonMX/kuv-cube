@@ -5,9 +5,9 @@ Tests for the bridge between the characteristics and the dispatcher.
 import asyncio
 import unittest
 
-from setup.bridge import Bridge
-from setup.dispatcher import Dispatcher
-from setup.framing import MessageDecoder, encode_message
+from programs.setup.bridge import Bridge
+from programs.setup.dispatcher import Dispatcher
+from programs.setup.framing import MessageDecoder, encode_message
 
 
 class FakeNetwork:

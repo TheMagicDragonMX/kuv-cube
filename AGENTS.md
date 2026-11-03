@@ -6,21 +6,21 @@ This repo is the software that runs on the cube's Raspberry Pi 4: it drives the 
 
 | Path | What it is |
 | --- | --- |
-| `setup/` | Gets the cube onto WiFi over Bluetooth (`python -m setup`). Everything below is inside it |
-| `setup/protocol.py` | Protocol constants and types. Mirror of `kuv-client/src/app/setup/protocol.ts` |
-| `setup/framing.py` | Cuts messages into Bluetooth-sized chunks and joins them back |
-| `setup/network.py` | WiFi through NetworkManager (`nmcli`) |
-| `setup/dispatcher.py` | Answers requests: PIN, lockout, routing each operation |
-| `setup/bridge.py` | Per-page state, chunks in and out, status events. No BlueZ in it |
-| `setup/gatt.py` | The only file that talks to BlueZ |
-| `setup/identity.py`, `setup/display.py` | Name / PIN / version, and the PIN on the matrix |
-| `main/` | Everything the cube does once online (`python -m main`): the matrix and the web app |
+| `programs/setup/` | Gets the cube onto WiFi over Bluetooth (`python -m programs.setup`). Everything below is inside it |
+| `programs/setup/protocol.py` | Protocol constants and types. Mirror of `kuv-client/src/app/setup/protocol.ts` |
+| `programs/setup/framing.py` | Cuts messages into Bluetooth-sized chunks and joins them back |
+| `programs/setup/network.py` | WiFi through NetworkManager (`nmcli`) |
+| `programs/setup/dispatcher.py` | Answers requests: PIN, routing each operation |
+| `programs/setup/bridge.py` | Per-page state, chunks in and out, status events. No BlueZ in it |
+| `programs/setup/gatt.py` | The only file that talks to BlueZ |
+| `programs/setup/identity.py`, `programs/setup/display.py` | Name / PIN / version, and the PIN on the matrix |
+| `programs/main/` | Everything the cube does once online (`python -m programs.main`): the matrix and the web app |
 | `deploy/` | systemd units. Setup runs only when offline at boot, main only when online |
 | `tests/` | `python3 -m unittest` |
 
-Keep the two programs apart: `setup/` must not grow code for the web app, and `main/` must not grow onboarding code. `setup/` may import `main.matrix` (the shared panel config), nothing else from `main/`.
+Keep the two programs apart: `programs/setup/` must not grow code for the web app, and `programs/main/` must not grow onboarding code. What both need goes in `programs/common/` (today the LED panel config); neither program imports the other.
 
-The setup contract is described in `kuv-client/src/app/setup/README.md`. When the protocol changes, change `protocol.ts` and `setup/protocol.py` together and bump `PROTOCOL_VERSION`.
+The setup contract is described in `kuv-client/src/app/setup/README.md`. When the protocol changes, change `protocol.ts` and `programs/setup/protocol.py` together and bump `PROTOCOL_VERSION`.
 
 The two programs are separate processes and never run at the same time (both need the LED matrix), so each unit checks at boot whether the cube is online.
 
