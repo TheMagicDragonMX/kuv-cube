@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 Where this module reports problems.
 """
 
-MAX_LINE_SIZE = 64 * 1024
+MAX_LINE_SIZE = 256 * 1024
 """
-A line longer than this is garbage and ends the connection.
+A line longer than this is garbage and ends the connection. Big enough for the five faces of the cube as images.
 """
 
 SOCKET_MODE = 0o660

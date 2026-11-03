@@ -21,12 +21,33 @@ Programs draw by sending the matrix program a "scene" (see `programs/common/matr
 |---|---|
 | `programs/matrix/` | Owns the LED panels, run with `python -m programs.matrix` by `kuv-matrix.service` |
 | `programs/setup/` | Bluetooth + WiFi onboarding, run with `python -m programs.setup` by `kuv-setup.service`. See below |
-| `programs/main/` | Everything the cube does once online, run with `python -m programs.main` by `kuv-cube.service` |
+| `programs/main/` | Everything the cube does once online, run with `python -m programs.main` by `kuv-cube.service`. Its library for running user programs is `programs/main/cube/`. See below |
 | `programs/common/` | What the programs share: the client and message format for talking to the matrix program |
 | `deploy/` | The systemd units for the programs above (copy to `/etc/systemd/system/`) |
 | `tests/` | `python3 -m unittest` |
 | `scripts/update.sh` | Auto-update script run by `kuv-update.timer` |
 | `requirements.txt` | Python deps (`rgbmatrix` is built from `/home/luna/rpi-rgb-led-matrix`) |
+
+## The cube library
+
+`programs/main/cube/` runs the programs the users make in the web app. A program is the JSON that the editor of `kuv-client` produces; the library checks it, runs it over time and shows it on the panels. It is a layer-by-layer port of `kuv-client/src/app/cube/` (same layers, same names in `snake_case`, same JSON), so a change in one is a change in the other. The map of the layers is in `programs/main/cube/__init__.py`.
+
+```python
+player = CubePlayer({"on_frame": lambda state: matrix.show(scene_of(state))})
+player.play(program)      # program: the JSON as a dict; raises ProgramError (with the path of the problem) if invalid
+```
+
+The web app's `CubeView` (3D) has no counterpart; its place is `view/panel_layout.py`, which turns the pixel buffer into one 64×64 `image` item per lit face for the matrix program. **`PANEL_SLOTS` there is a placeholder**: set the slot (column, row of the 2×3 grid of panels) and the rotation of every face to how the panels are really wired.
+
+Not ported: the example programs (`examples/` in the web app) and the 3D parts (`view/`, `component/`).
+
+Trying it on the Pi, with the matrix program running (Ctrl+C to stop):
+
+```bash
+/home/luna/kuv/venv/bin/python -m programs.main program.json    # or `-` to read the program from the standard input
+```
+
+Without a file, `programs.main` still just paints the panels blue. Tests: `tests/test_cube_*.py`.
 
 ## The setup program
 

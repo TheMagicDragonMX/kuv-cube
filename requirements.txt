@@ -1,3 +1,4 @@
 requests
 rgbmatrix @ file:///home/luna/rpi-rgb-led-matrix
 bluez-peripheral
+Pillow

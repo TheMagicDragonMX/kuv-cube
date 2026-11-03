@@ -2,6 +2,7 @@
 The LED panels: how they are wired and how to draw on them.
 """
 
+import base64
 import logging
 import os
 
@@ -73,6 +74,12 @@ class Screen:
         Fonts loaded so far, by name.
         """
 
+        self._fast_images = True
+        """
+        Whether pictures are copied to the canvas in one call. Turned off for good if the matrix library cannot do
+        it with the installed imaging library, and then they are copied pixel by pixel.
+        """
+
     def open(self) -> None:
         """
         Opens the panels, with the settings used by the demo executable.
@@ -111,12 +118,38 @@ class Screen:
 
                 continue
 
+            if item["type"] == "image":
+                self._draw_image(canvas, item)
+
+                continue
+
             font = self._font(item["font"])
 
             if font is not None:
                 graphics.DrawText(canvas, font, item["x"], item["y"], graphics.Color(*item["color"]), item["text"])
 
         self._canvas = self._matrix.SwapOnVSync(canvas)
+
+    def _draw_image(self, canvas, item: Item) -> None:
+        """
+        Draws a picture on the canvas.
+        """
+        from PIL import Image
+
+        picture = Image.frombytes("RGB", (item["width"], item["height"]), base64.b64decode(item["pixels"]))
+
+        if self._fast_images:
+            try:
+                canvas.SetImage(picture, item["x"], item["y"])
+
+                return
+
+            except Exception:
+                logger.warning("Fast image drawing does not work here, drawing pixel by pixel", exc_info=True)
+
+                self._fast_images = False
+
+        canvas.SetImage(picture, item["x"], item["y"], unsafe=False)
 
     def _font(self, name: str):
         """
