@@ -35,7 +35,7 @@ Chains driven in parallel. Two, because the third output of the bonnet pulls GPI
 the top half of its panels without green and blue. Going back to three needs a bonnet that does not do that.
 """
 
-BRIGHTNESS = 15
+BRIGHTNESS = 35
 """
 Brightness percentage, kept low to stay within the power supply and thermal limits.
 """
