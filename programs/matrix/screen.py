@@ -29,9 +29,10 @@ PANEL_CHAIN_LENGTH = 2
 Panels daisy-chained on each output.
 """
 
-PANEL_PARALLEL = 3
+PANEL_PARALLEL = 2
 """
-Chains driven in parallel.
+Chains driven in parallel. Two, because the third output of the bonnet pulls GPIO 2 and 3 to ground, which leaves
+the top half of its panels without green and blue. Going back to three needs a bonnet that does not do that.
 """
 
 BRIGHTNESS = 15
