@@ -1,7 +1,7 @@
 """
 The cube: runs the programs the users make, and shows them on the LED panels.
 
-A program is JSON, the same one the web app produces (see `kuv-client/src/app/cube/`). This folder is a port of that
+A program is JSON, the same one the web app produces (see `kuv-client/src/app/cube/engine/`). This folder is a port of that
 folder, layer by layer, so a change in one is a change in the other.
 
     program (JSON) --> interpreter + scheduler --> world --> renderer --> state --> panel layout --> matrix

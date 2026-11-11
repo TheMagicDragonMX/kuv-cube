@@ -51,7 +51,7 @@ Done in the repo, **not yet on the Pi**: the single config file (`deploy/kuv.env
 
 ## The cube library
 
-`programs/main/cube/` runs the programs the users make in the web app. A program is the JSON that the editor of `kuv-client` produces; the library checks it, runs it over time and shows it on the panels. It is a layer-by-layer port of `kuv-client/src/app/cube/` (same layers, same names in `snake_case`, same JSON), so a change in one is a change in the other. The map of the layers is in `programs/main/cube/__init__.py`.
+`programs/main/cube/` runs the programs the users make in the web app. A program is the JSON that the editor of `kuv-client` produces; the library checks it, runs it over time and shows it on the panels. It is a layer-by-layer port of `kuv-client/src/app/cube/engine/` (same layers, same names in `snake_case`, same JSON), so a change in one is a change in the other. The map of the layers is in `programs/main/cube/__init__.py`.
 
 ```python
 player = CubePlayer({"on_frame": lambda state: matrix.show(scene_of(state))})
@@ -76,7 +76,7 @@ When the server is configured, `programs.main` keeps a WebSocket open to `kuv-ap
 
 Its settings are `KUV_SERVER_URL`, `KUV_CUBE_SECRET` and `KUV_CUBE_ID`, see [Configuration](#configuration).
 
-The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/app/cube-link/protocol.ts` and `CubeMessage` in kuv-api). A command is a handler registered in `programs/main/link/commands.py`, which gets the payload and returns the events to send back. For now the only one is `message`, which answers with a mock `reply`. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
+The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/app/cube/link/protocol.ts` and `CubeMessage` in kuv-api). A command is a handler registered in `programs/main/link/commands.py`, which gets the payload and returns the events to send back. For now the only one is `message`, which answers with a mock `reply`. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
 
 ## Configuration
 
@@ -108,7 +108,7 @@ To run a program by hand with the same settings: `sudo bash -c 'set -a; . /etc/k
 
 ## The setup program
 
-Contract with the web app: `kuv-client/src/app/setup/README.md`.
+Contract with the web app: `kuv-client/src/app/cube/setup/README.md`.
 
 | File | The one thing it does |
 | --- | --- |

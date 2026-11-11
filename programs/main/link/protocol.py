@@ -1,5 +1,5 @@
 """
-The messages of the cube socket. Mirror of `CubeMessage` in kuv-api and of `kuv-client/src/app/cube-link/protocol.ts`.
+The messages of the cube socket. Mirror of `CubeMessage` in kuv-api and of `kuv-client/src/app/cube/link/protocol.ts`.
 
 Every message, in both directions, is one JSON text frame with the same shape. A client sends commands to the cube, the
 cube sends events to its clients, and the server sends its own notices.

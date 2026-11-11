@@ -8,10 +8,10 @@ This repo is the software that runs on the cube's Raspberry Pi 4: it drives the 
 | --- | --- |
 | `programs/matrix/` | The only code that opens the LED panels (`python -m programs.matrix`). Other programs draw through it |
 | `programs/common/` | Shared by the programs: `matrix_client.py` (how to draw) and `matrix_protocol.py` (the messages) |
-| `programs/main/cube/` | The library that runs the users' programs (JSON from the web app) and shows them on the panels. Layer-by-layer port of `kuv-client/src/app/cube/`, see section 1 |
-| `programs/main/link/` | The live WebSocket to `kuv-api`: commands in, events out. Mirror of `kuv-client/src/app/cube-link/protocol.ts`; change both together |
+| `programs/main/cube/` | The library that runs the users' programs (JSON from the web app) and shows them on the panels. Layer-by-layer port of `kuv-client/src/app/cube/engine/`, see section 1 |
+| `programs/main/link/` | The live WebSocket to `kuv-api`: commands in, events out. Mirror of `kuv-client/src/app/cube/link/protocol.ts`; change both together |
 | `programs/setup/` | Gets the cube onto WiFi over Bluetooth (`python -m programs.setup`). Everything below is inside it |
-| `programs/setup/protocol.py` | Protocol constants and types. Mirror of `kuv-client/src/app/setup/protocol.ts` |
+| `programs/setup/protocol.py` | Protocol constants and types. Mirror of `kuv-client/src/app/cube/setup/protocol.ts` |
 | `programs/setup/framing.py` | Cuts messages into Bluetooth-sized chunks and joins them back |
 | `programs/setup/network.py` | WiFi through NetworkManager (`nmcli`) |
 | `programs/setup/dispatcher.py` | Answers requests: PIN, routing each operation |
@@ -24,9 +24,9 @@ This repo is the software that runs on the cube's Raspberry Pi 4: it drives the 
 
 Keep the two programs apart: `programs/setup/` must not grow code for the web app, and `programs/main/` must not grow onboarding code. What both need goes in `programs/common/`; neither imports the other. Never open the LED panels from `setup` or `main`: draw with `MatrixClient`, so nothing has to be stopped to free the panels.
 
-The cube library (`programs/main/cube/`) mirrors `kuv-client/src/app/cube/`: same layers (state, geometry, drawing, world, blocks, program, commands, runtime, environment, renderer, engine), same program JSON. When a block, a layer rule or the program format changes in one, change the other too. Only `view/panel_layout.py` knows the panels, and it only makes a scene for `MatrixClient`. The engine never reads a clock; the player does.
+The cube library (`programs/main/cube/`) mirrors `kuv-client/src/app/cube/engine/`: same layers (state, geometry, drawing, world, blocks, program, commands, runtime, environment, renderer, engine), same program JSON. When a block, a layer rule or the program format changes in one, change the other too. Only `view/panel_layout.py` knows the panels, and it only makes a scene for `MatrixClient`. The engine never reads a clock; the player does.
 
-The setup contract is described in `kuv-client/src/app/setup/README.md`. When the protocol changes, change `protocol.ts` and `programs/setup/protocol.py` together and bump `PROTOCOL_VERSION`.
+The setup contract is described in `kuv-client/src/app/cube/setup/README.md`. When the protocol changes, change `protocol.ts` and `programs/setup/protocol.py` together and bump `PROTOCOL_VERSION`.
 
 The programs are separate processes. The matrix program always runs; setup and main take turns (each unit checks at boot whether the cube is online).
 

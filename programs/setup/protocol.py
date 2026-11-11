@@ -1,7 +1,7 @@
 """
 The setup protocol the cube speaks over Bluetooth.
 
-Mirror of kuv-client/src/app/setup/protocol.ts: keep both in sync, and bump PROTOCOL_VERSION
+Mirror of kuv-client/src/app/cube/setup/protocol.ts: keep both in sync, and bump PROTOCOL_VERSION
 when a change would break a page (or a cube) that speaks the previous version.
 """
 

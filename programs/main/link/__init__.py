@@ -1,7 +1,7 @@
 """
 The live link between the cube and the server: a WebSocket the cube keeps open to receive commands and to send events.
 
-    protocol.py   The messages, mirrored by the API (`CubeMessage`) and by `kuv-client/src/app/cube-link/`
+    protocol.py   The messages, mirrored by the API (`CubeMessage`) and by `kuv-client/src/app/cube/link/`
     settings.py   Where the server is and who this cube is, from the environment
     commands.py   What the cube does for each command it can receive
     link.py       The connection itself: connects, reconnects, routes what arrives to the commands
