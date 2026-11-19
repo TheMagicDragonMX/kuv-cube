@@ -13,8 +13,8 @@ one leaves its left slots without a panel. Each face has a slot, and a number of
 mounted rotated.
 
                        column 0     column 1   column 2
-    row 0, output 1:   BACK         RIGHT      FRONT     <- Pi
-    row 1, output 2:   (no panel)   TOP        LEFT      <- Pi
+    row 0, output 1:   TOP (180°)   FRONT      RIGHT     <- Pi
+    row 1, output 2:   (no panel)   BACK       LEFT      <- Pi
 
 Faces that are all black are left out of the scene: the matrix program clears the canvas before drawing, so they
 cost nothing to send.
@@ -50,16 +50,16 @@ class PanelSlot(TypedDict):
 
 
 PANEL_SLOTS: dict[Face, PanelSlot] = {
-    Face.FRONT: {"column": 2, "row": 0, "turns": 0},
-    Face.RIGHT: {"column": 1, "row": 0, "turns": 0},
-    Face.BACK: {"column": 0, "row": 0, "turns": 0},
+    Face.FRONT: {"column": 1, "row": 0, "turns": 0},
+    Face.RIGHT: {"column": 2, "row": 0, "turns": 0},
+    Face.BACK: {"column": 1, "row": 1, "turns": 0},
     Face.LEFT: {"column": 2, "row": 1, "turns": 0},
-    Face.TOP: {"column": 1, "row": 1, "turns": 0},
+    Face.TOP: {"column": 0, "row": 0, "turns": 2},
 }
 """
-The slot of each face, as the panels are wired: front, right and back in series on the first output, left and top on
-the second, each chain starting at the right column. `PANEL_CHAIN_LENGTH` and `PANEL_PARALLEL` in `programs/matrix/screen.py` make the canvas this size. The
-turns are 0 until a panel is seen to be mounted rotated.
+The slot of each face, as seen on the cube with `python -m programs.panels`: right then front on the first output,
+then the top panel, mounted upside down; left then back on the second. The panel closest to the Pi shows the right
+column. `PANEL_CHAIN_LENGTH` and `PANEL_PARALLEL` in `programs/matrix/screen.py` make the canvas this size.
 """
 
 

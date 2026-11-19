@@ -118,14 +118,14 @@ class PanelLayoutTest(unittest.TestCase):
 
     def test_slots_follow_the_wiring(self) -> None:
         """
-        Front, right and back in series on the first output; left and top on the second. Each chain starts at the right
-        column, where the panel closest to the Pi shows.
+        Each face goes to the panel it was seen on with `python -m programs.panels`: right, front and top on the first
+        output, left and back on the second.
         """
         slots = {face: (slot["column"], slot["row"]) for face, slot in PANEL_SLOTS.items()}
 
         self.assertEqual(
             slots,
-            {Face.FRONT: (2, 0), Face.RIGHT: (1, 0), Face.BACK: (0, 0), Face.LEFT: (2, 1), Face.TOP: (1, 1)},
+            {Face.FRONT: (1, 0), Face.RIGHT: (2, 0), Face.BACK: (1, 1), Face.LEFT: (2, 1), Face.TOP: (0, 0)},
         )
 
     def test_rotates_a_face_clockwise(self) -> None:
