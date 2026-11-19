@@ -24,20 +24,16 @@ PANEL_COLUMNS = 64
 Columns of LEDs in one panel.
 """
 
-PANEL_CHAIN_LENGTH = 2
+PANEL_CHAIN_LENGTH = 3
 """
-Panels daisy-chained on each output.
+Panels daisy-chained on each output: the longest chain sets it. The first output has three (front, right, back), the
+second only two (left, top), so the last slot of the second row has no panel and what is drawn there is not seen.
 """
 
 PANEL_PARALLEL = 2
 """
 Chains driven in parallel. Two, because the third output of the bonnet pulls GPIO 2 and 3 to ground, which leaves
 the top half of its panels without green and blue. Going back to three needs a bonnet that does not do that.
-"""
-
-BRIGHTNESS = 35
-"""
-Brightness percentage, kept low to stay within the power supply and thermal limits.
 """
 
 GPIO_SLOWDOWN = 6
@@ -81,9 +77,9 @@ class Screen:
         it with the installed imaging library, and then they are copied pixel by pixel.
         """
 
-    def open(self) -> None:
+    def open(self, brightness: int) -> None:
         """
-        Opens the panels, with the settings used by the demo executable.
+        Opens the panels, with the settings used by the demo executable, at `brightness` percent.
         """
         from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
@@ -94,7 +90,7 @@ class Screen:
         options.parallel = PANEL_PARALLEL
         options.hardware_mapping = "regular"
         options.row_address_type = 0
-        options.brightness = BRIGHTNESS
+        options.brightness = brightness
         options.gpio_slowdown = GPIO_SLOWDOWN
         # The library drops root right after opening the panels, which would leave this program unable
         # to create its socket or remove it on exit.
@@ -102,6 +98,12 @@ class Screen:
 
         self._matrix = RGBMatrix(options=options)
         self._canvas = self._matrix.CreateFrameCanvas()
+
+    def set_brightness(self, brightness: int) -> None:
+        """
+        Changes the brightness (percent). It applies to what is drawn next, so the caller draws the scene again.
+        """
+        self._matrix.brightness = brightness
 
     def draw(self, items: list[Item]) -> None:
         """

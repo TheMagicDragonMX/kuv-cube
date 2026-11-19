@@ -6,9 +6,11 @@ import asyncio
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 from programs.common.matrix_client import MatrixClient
-from programs.common.matrix_protocol import MAIN_PRIORITY, SETUP_PRIORITY, clean_scene, fill, text
+from programs.common.matrix_protocol import DEFAULT_BRIGHTNESS, MAIN_PRIORITY, SETUP_PRIORITY, clean_scene, fill, text
+from programs.matrix.brightness import load_brightness, save_brightness
 from programs.matrix.screen import Screen
 from programs.matrix.server import MatrixServer
 
@@ -28,6 +30,17 @@ class RecordingScreen(Screen):
         """
         Every scene drawn, oldest first.
         """
+
+        self.brightness: int | None = None
+        """
+        The last brightness set, or None.
+        """
+
+    def set_brightness(self, brightness: int) -> None:
+        """
+        Records the brightness.
+        """
+        self.brightness = brightness
 
     def draw(self, items: list) -> None:
         """
@@ -61,7 +74,8 @@ class MatrixTest(unittest.IsolatedAsyncioTestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.path = os.path.join(self.directory.name, "run", "matrix.sock")
         self.screen = RecordingScreen()
-        self.server = MatrixServer(self.screen, self.path)
+        self.remembered: list[int] = []
+        self.server = MatrixServer(self.screen, self.path, remember=self.remembered.append)
         self.clients: list[MatrixClient] = []
 
         await self.server.start()
@@ -208,6 +222,76 @@ class MatrixTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.screen.current, [])
 
         writer.close()
+
+    async def test_a_program_learns_the_brightness(self) -> None:
+        """
+        Right after connecting, a program knows how bright the panels are.
+        """
+        main = self.client("main", MAIN_PRIORITY)
+
+        await self.settle()
+
+        self.assertEqual(main.brightness, DEFAULT_BRIGHTNESS)
+
+    async def test_changing_the_brightness_redraws_remembers_and_tells_everyone(self) -> None:
+        """
+        A new brightness reaches the panels, the scene is drawn again with it, it is kept for the next boot and
+        every program hears it.
+        """
+        main = self.client("main", MAIN_PRIORITY)
+        setup = self.client("setup", SETUP_PRIORITY)
+
+        await self.settle()
+
+        main.show(BLUE)
+
+        await self.settle()
+
+        drawn = len(self.screen.drawn)
+
+        self.assertTrue(main.set_brightness(80))
+
+        await self.settle()
+
+        self.assertEqual(self.screen.brightness, 80)
+        self.assertEqual(self.screen.current, BLUE)
+        self.assertGreater(len(self.screen.drawn), drawn)
+        self.assertEqual(self.remembered, [80])
+        self.assertEqual((main.brightness, setup.brightness), (80, 80))
+
+    async def test_an_invalid_brightness_is_ignored(self) -> None:
+        """
+        Out of range, or not a whole number: nothing changes.
+        """
+        main = self.client("main", MAIN_PRIORITY)
+
+        await self.settle()
+
+        main.set_brightness(0)
+        main.set_brightness(101)
+        main._send({"op": "brightness", "percent": "50"})
+
+        await self.settle()
+
+        self.assertIsNone(self.screen.brightness)
+        self.assertEqual(main.brightness, DEFAULT_BRIGHTNESS)
+
+    def test_the_brightness_is_kept_between_boots(self) -> None:
+        """
+        What is saved is loaded next time; a missing or broken file gives the default.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory) / "state"
+
+            self.assertEqual(load_brightness(folder), DEFAULT_BRIGHTNESS)
+
+            save_brightness(60, folder)
+
+            self.assertEqual(load_brightness(folder), 60)
+
+            (folder / "brightness").write_text("lots\n")
+
+            self.assertEqual(load_brightness(folder), DEFAULT_BRIGHTNESS)
 
     def test_clean_scene(self) -> None:
         """

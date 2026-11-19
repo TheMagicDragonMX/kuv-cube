@@ -112,6 +112,85 @@ class ProgramCommandsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[0]["payload"]["code"], "unknown_command")
 
 
+class FakeMatrix:
+    """
+    Stands in for the connection to the matrix program: remembers the brightness it was asked for.
+    """
+
+    def __init__(self, connected: bool = True) -> None:
+        """
+        Starts at 35%, connected or not.
+        """
+        self.connected = connected
+        """
+        Whether the matrix program is reachable.
+        """
+
+        self.brightness: int | None = 35 if connected else None
+        """
+        How bright the panels are, as the matrix program said.
+        """
+
+    def set_brightness(self, percent: int) -> bool:
+        """
+        Takes the new brightness when connected.
+        """
+        if self.connected:
+            self.brightness = percent
+
+        return self.connected
+
+
+class BrightnessCommandsTest(unittest.IsolatedAsyncioTestCase):
+    """
+    Reading and changing the brightness of the panels through the link.
+    """
+
+    async def test_get_brightness_answers_the_current_one(self) -> None:
+        """
+        The answer is what the matrix program says.
+        """
+        events = await default_commands(matrix=FakeMatrix()).handle({"name": "get_brightness"})
+
+        self.assertEqual(events, [{"name": "brightness", "payload": {"percent": 35}}])
+
+    async def test_set_brightness_changes_it(self) -> None:
+        """
+        A valid percent reaches the matrix and is answered with the new brightness.
+        """
+        matrix = FakeMatrix()
+
+        events = await default_commands(matrix=matrix).handle({"name": "set_brightness", "payload": {"percent": 70}})
+
+        self.assertEqual(events, [{"name": "brightness", "payload": {"percent": 70}}])
+        self.assertEqual(matrix.brightness, 70)
+
+    async def test_out_of_range_brightness_is_an_error(self) -> None:
+        """
+        Zero, more than 100 or not a whole number is an invalid_payload error, and nothing changes.
+        """
+        matrix = FakeMatrix()
+        router = default_commands(matrix=matrix)
+
+        for percent in (0, 101, 50.5, "50", True):
+            events = await router.handle({"name": "set_brightness", "payload": {"percent": percent}})
+
+            self.assertEqual(events[0]["payload"]["code"], "invalid_payload")
+
+        self.assertEqual(matrix.brightness, 35)
+
+    async def test_without_the_matrix_it_fails(self) -> None:
+        """
+        When the matrix program is not reachable both commands answer an error.
+        """
+        router = default_commands(matrix=FakeMatrix(connected=False))
+
+        for command in ({"name": "get_brightness"}, {"name": "set_brightness", "payload": {"percent": 50}}):
+            events = await router.handle(command)
+
+            self.assertEqual(events[0]["payload"]["code"], "failed")
+
+
 class SettingsTest(unittest.TestCase):
     """
     How the environment becomes settings.

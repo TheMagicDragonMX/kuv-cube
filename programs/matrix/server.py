@@ -1,5 +1,5 @@
 """
-Decides what the panels show: the scene of the highest-priority program that has one.
+Decides what the panels show: the scene of the highest-priority program that has one, and how bright they are.
 """
 
 import asyncio
@@ -7,8 +7,9 @@ import json
 import logging
 import os
 from itertools import count
+from typing import Callable
 
-from programs.common.matrix_protocol import SOCKET_PATH, Item, clean_scene
+from programs.common.matrix_protocol import DEFAULT_BRIGHTNESS, SOCKET_PATH, Item, clean_brightness, clean_scene
 from programs.matrix.screen import Screen
 
 
@@ -33,10 +34,15 @@ class Program:
     A connected program and what it wants shown.
     """
 
-    def __init__(self, order: int) -> None:
+    def __init__(self, order: int, writer: asyncio.StreamWriter) -> None:
         """
         Starts unnamed, at the lowest priority, with nothing to show.
         """
+        self.writer = writer
+        """
+        Where to write to it.
+        """
+
         self.order = order
         """
         When it connected, to break ties between equal priorities (the newer one wins).
@@ -63,10 +69,27 @@ class MatrixServer:
     Listens for programs and keeps the panels showing the right scene.
     """
 
-    def __init__(self, screen: Screen, socket_path: str = SOCKET_PATH) -> None:
+    def __init__(
+        self,
+        screen: Screen,
+        socket_path: str = SOCKET_PATH,
+        brightness: int = DEFAULT_BRIGHTNESS,
+        remember: Callable[[int], None] | None = None,
+    ) -> None:
         """
-        Draws on `screen` and listens on `socket_path`.
+        Draws on `screen`, opened at `brightness` percent, and listens on `socket_path`. `remember` is called with
+        every new brightness, to keep it for the next boot.
         """
+        self._brightness = brightness
+        """
+        How bright the panels are now, in percent.
+        """
+
+        self._remember = remember
+        """
+        Keeps a new brightness for the next boot, if given.
+        """
+
         self._screen = screen
         """
         The panels.
@@ -137,7 +160,7 @@ class MatrixServer:
         """
         Handles one connected program until it disconnects.
         """
-        program = Program(next(self._order))
+        program = Program(next(self._order), writer)
 
         self._programs.add(program)
         self._writers.add(writer)
@@ -180,6 +203,13 @@ class MatrixServer:
 
                 logger.info("%s connected (priority %d)", program.name, program.priority)
 
+                self._tell(program, self._brightness)
+
+        elif message.get("op") == "brightness":
+            self._set_brightness(clean_brightness(message.get("percent")))
+
+            return
+
         elif message.get("op") == "show":
             scene = clean_scene(message.get("items"))
 
@@ -188,6 +218,43 @@ class MatrixServer:
                 program.order = next(self._order)
 
         self._render()
+
+    def _set_brightness(self, brightness: int | None) -> None:
+        """
+        Changes how bright the panels are, draws the scene again with it (the panels apply it to what is drawn
+        next), remembers it and tells every program. An invalid value is ignored.
+        """
+        if brightness is None:
+            return
+
+        self._brightness = brightness
+
+        try:
+            self._screen.set_brightness(brightness)
+
+        except Exception:
+            logger.exception("Could not change the brightness")
+
+        logger.info("Brightness %d%%", brightness)
+
+        if self._remember is not None:
+            self._remember(brightness)
+
+        for program in [*self._programs]:
+            self._tell(program, brightness)
+
+        self._shown = None
+        self._render()
+
+    def _tell(self, program: Program, brightness: int) -> None:
+        """
+        Tells one program the brightness of the panels.
+        """
+        try:
+            program.writer.write(json.dumps({"op": "brightness", "percent": brightness}).encode() + b"\n")
+
+        except (OSError, RuntimeError):
+            pass
 
     def _render(self) -> None:
         """

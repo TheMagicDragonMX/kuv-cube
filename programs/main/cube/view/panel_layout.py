@@ -6,8 +6,12 @@ canvas of the panels, and the only one that knows the cube is shown through the 
 
     CubeState --read by--> panel layout --scene (one image per face)--> MatrixClient --> matrix program
 
-The canvas is a grid of 64x64 slots (`column`, `row`), one per panel. Each face has a slot, and a number of quarter
-turns for panels that are mounted rotated.
+The canvas is a grid of 64x64 slots (`column`, `row`), one per panel: a row is one output of the bonnet, and the
+columns are the panels chained on it, the first one (closest to the Pi) on the left. Each face has a slot, and a
+number of quarter turns for panels that are mounted rotated.
+
+    row 0, output 1:   FRONT   RIGHT   BACK
+    row 1, output 2:   LEFT    TOP     (no panel)
 
 Faces that are all black are left out of the scene: the matrix program clears the canvas before drawing, so they
 cost nothing to send.
@@ -45,13 +49,16 @@ class PanelSlot(TypedDict):
 PANEL_SLOTS: dict[Face, PanelSlot] = {
     Face.FRONT: {"column": 0, "row": 0, "turns": 0},
     Face.RIGHT: {"column": 1, "row": 0, "turns": 0},
-    Face.BACK: {"column": 0, "row": 1, "turns": 0},
-    Face.LEFT: {"column": 1, "row": 1, "turns": 0},
-    Face.TOP: {"column": 0, "row": 2, "turns": 0},
+    Face.BACK: {"column": 2, "row": 0, "turns": 0},
+    Face.LEFT: {"column": 0, "row": 1, "turns": 0},
+    Face.TOP: {"column": 1, "row": 1, "turns": 0},
 }
 """
-The slot of each face. This is a placeholder: change it to how the panels are really wired and mounted.
+The slot of each face, as the panels are wired: front, right and back in series on the first output, left and top on
+the second. `PANEL_CHAIN_LENGTH` and `PANEL_PARALLEL` in `programs/matrix/screen.py` make the canvas this size. The
+turns are 0 until a panel is seen to be mounted rotated.
 """
+
 
 def rotate(pixels: list[int], turns: int) -> list[int]:
     """

@@ -34,7 +34,7 @@ Done in the repo, **not yet on the Pi**: the single config file (`deploy/kuv.env
 4. Push to `dev`, then `sudo systemctl daemon-reload && sudo systemctl restart kuv-cube.service`.
 5. Check: `journalctl -u kuv-cube -e` must say "Linked to the server as cube …". Then open the web app at `/cube-chat` (log in first), type the cube id (`cat /etc/machine-id` on the Pi, or `KUV_CUBE_ID`) and send a message: the cube answers with a mock reply.
 
-**After that**, the live link is ready to carry real commands: the next feature is a `play_program` command (server sends a program JSON, the handler validates it and calls `CubePlayer.play`), then the cube sending user inputs to the server. Known gaps of the link: the client's token is only checked when the socket opens; the web app's server address (`ws://localhost:5038`) and the production origin checks are not configurable yet; `PANEL_SLOTS` in `programs/main/cube/view/panel_layout.py` is still a placeholder until the real panel wiring is set.
+**After that**, the live link is ready to carry real commands: the next feature is a `play_program` command (server sends a program JSON, the handler validates it and calls `CubePlayer.play`), then the cube sending user inputs to the server. Known gaps of the link: the client's token is only checked when the socket opens; the web app's server address (`ws://localhost:5038`) and the production origin checks are not configurable yet.
 
 ## Repository
 
@@ -58,7 +58,7 @@ player = CubePlayer({"on_frame": lambda state: matrix.show(scene_of(state))})
 player.play(program)      # program: the JSON as a dict; raises ProgramError (with the path of the problem) if invalid
 ```
 
-The web app's `CubeView` (3D) has no counterpart; its place is `view/panel_layout.py`, which turns the pixel buffer into one 64×64 `image` item per lit face for the matrix program. **`PANEL_SLOTS` there is a placeholder**: set the slot (column, row of the 2×3 grid of panels) and the rotation of every face to how the panels are really wired.
+The web app's `CubeView` (3D) has no counterpart; its place is `view/panel_layout.py`, which turns the pixel buffer into one 64×64 `image` item per lit face for the matrix program. `PANEL_SLOTS` there follows the wiring: front, right and back in series on the first output of the bonnet, left and top on the second (a 3×2 grid, set by `PANEL_CHAIN_LENGTH` and `PANEL_PARALLEL` in `programs/matrix/screen.py`). A panel mounted rotated gets its quarter turns there.
 
 Not ported: the example programs (`examples/` in the web app), the video recorder (`recorder/`) and the 3D parts (`view/`, `component/`).
 
@@ -83,6 +83,8 @@ The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/
 | `message` | `{"text": str}` | a mock `reply` |
 | `run_program` | a program file: `{"version": 1, "program": {...}, "environment": {...}}`, what the editor's "Cubo real" button sends | `program_status` `{"running": bool}`, or `error` with code `invalid_program` (the cube keeps what it ran) |
 | `stop_program` | none | `program_status` |
+| `set_brightness` | `{"percent": int}`, 1 to 100 | `brightness` `{"percent": int}`, or `error` with code `invalid_payload` |
+| `get_brightness` | none | `brightness` |
 
 A program from the link replaces the one the cube runs. The program file is read by `programs/main/cube/program_file/` (mirror of the web app's `program-file.ts`). kuv-api takes at most 1 MiB from a browser, so the editor's button only works for small programs. Saved creations go another way: the web app sends `run_creation` with the creation's id, and kuv-api sends its `program.json` to the cube as `run_program`. The cube takes frames up to 64 MiB (`MAX_MESSAGE_BYTES` in `link.py`) and reads them in a thread, so a program of several MB does not stall the link. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
 
@@ -108,7 +110,7 @@ sudo chmod 600 /etc/kuv/kuv.env && sudo nano /etc/kuv/kuv.env
 | `DISCORD_WEBHOOK_URL` | Webhook for the boot and "code updated" messages | none | `kuv-discord-boot`, `kuv-update` |
 | `DISCORD_WEBHOOK_SHUTDOWN_URL` | Webhook for the shutdown message | none | `kuv-discord-shutdown` |
 
-Not in this file on purpose: `KUV_SETUP_HANDOFF` (wiring between two units, set in `kuv-setup.service`), the hardware tuning of the panels (rows, brightness, GPIO slowdown: constants in `programs/matrix/screen.py`), the folder paths (`REPO_DIR`, `VENV_DIR` in `scripts/update.sh` and the units) and the secrets of the API (those are `Jwt__Key`, `Cubes__Secret` and the database string, in `kuv-api`'s own environment).
+Not in this file on purpose: `KUV_SETUP_HANDOFF` (wiring between two units, set in `kuv-setup.service`), the hardware tuning of the panels (rows, GPIO slowdown: constants in `programs/matrix/screen.py`), their brightness (35% until someone moves the slider of the web app's "Cubo real" card, then the last value, kept in `/var/lib/kuv/brightness`; the limits are in `programs/common/matrix_protocol.py`), the folder paths (`REPO_DIR`, `VENV_DIR` in `scripts/update.sh` and the units) and the secrets of the API (those are `Jwt__Key`, `Cubes__Secret` and the database string, in `kuv-api`'s own environment).
 
 To run a program by hand with the same settings: `sudo bash -c 'set -a; . /etc/kuv/kuv.env; set +a; exec /home/luna/kuv/venv/bin/python -m programs.main'`.
 

@@ -9,6 +9,11 @@ draw) over a local socket, as one JSON object per line:
 
 A scene can also hold pictures: an "image" item is a rectangle of RGB pixels (base64) placed on the canvas.
 
+The brightness of the panels belongs to the matrix program too. A program changes it, and the matrix program tells
+every connected program the brightness right after "hello" and whenever it changes, in the same message:
+
+    {"op": "brightness", "percent": 35}
+
 Each program has one scene; the matrix shows the scene of the program with the highest priority
 that has something to draw. A program that disconnects takes its scene with it.
 """
@@ -32,6 +37,22 @@ Priority of the main program: it draws underneath everything else.
 SETUP_PRIORITY = 10
 """
 Priority of the setup program: the PIN is drawn over whatever main shows.
+"""
+
+DEFAULT_BRIGHTNESS = 35
+"""
+Brightness of the panels (percent) until someone changes it. Kept low to stay within the power supply and thermal
+limits.
+"""
+
+MIN_BRIGHTNESS = 1
+"""
+Lowest brightness a program may set (percent). Zero would look like a broken cube.
+"""
+
+MAX_BRIGHTNESS = 100
+"""
+Highest brightness a program may set (percent). Lower it if the power supply cannot feed every panel at full white.
 """
 
 MAX_ITEMS = 32
@@ -270,3 +291,16 @@ def clean_scene(value: Any) -> list[Item] | None:
         return None
 
     return items
+
+
+def clean_brightness(value: Any) -> int | None:
+    """
+    The brightness if it is a whole percent from MIN_BRIGHTNESS to MAX_BRIGHTNESS, otherwise None.
+    """
+    if not isinstance(value, int) or isinstance(value, bool):
+        return None
+
+    if not MIN_BRIGHTNESS <= value <= MAX_BRIGHTNESS:
+        return None
+
+    return value

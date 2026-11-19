@@ -16,6 +16,7 @@ from programs.main.cube import CubePlayer
 from programs.main.cube.state.cube_state import CubeState, Face
 from programs.main.cube.view import panel_layout
 from programs.main.cube.view.panel_layout import PANEL_SLOTS, rotate, scene_of
+from programs.matrix.screen import PANEL_CHAIN_LENGTH, PANEL_PARALLEL
 from programs.matrix.server import MatrixServer
 from tests.test_matrix import RecordingScreen
 
@@ -107,13 +108,24 @@ class PanelLayoutTest(unittest.TestCase):
 
     def test_every_face_has_a_distinct_slot_inside_the_canvas(self) -> None:
         """
-        No two faces share a panel, and all are in the 2x3 grid of the matrix program.
+        No two faces share a panel, and all are on the canvas the matrix program opens.
         """
         slots = [(slot["column"], slot["row"]) for slot in PANEL_SLOTS.values()]
 
         self.assertEqual(len(slots), len(set(slots)))
         self.assertEqual(set(PANEL_SLOTS), set(Face))
-        self.assertTrue(all(0 <= column < 2 and 0 <= row < 3 for column, row in slots))
+        self.assertTrue(all(0 <= column < PANEL_CHAIN_LENGTH and 0 <= row < PANEL_PARALLEL for column, row in slots))
+
+    def test_slots_follow_the_wiring(self) -> None:
+        """
+        Front, right and back in series on the first output; left and top on the second.
+        """
+        slots = {face: (slot["column"], slot["row"]) for face, slot in PANEL_SLOTS.items()}
+
+        self.assertEqual(
+            slots,
+            {Face.FRONT: (0, 0), Face.RIGHT: (1, 0), Face.BACK: (2, 0), Face.LEFT: (0, 1), Face.TOP: (1, 1)},
+        )
 
     def test_rotates_a_face_clockwise(self) -> None:
         """
@@ -200,7 +212,8 @@ class EndToEndTest(unittest.IsolatedAsyncioTestCase):
             player.dispose()
 
             front = next(item for item in screen.current if item["x"] == 0 and item["y"] == 0)
-            top = next(item for item in screen.current if item["y"] == 128)
+            top_slot = PANEL_SLOTS[Face.TOP]
+            top = next(item for item in screen.current if (item["x"], item["y"]) == (top_slot["column"] * 64, top_slot["row"] * 64))
             x = next(x for x in range(64) if pixel_of(front, x, 5) == (255, 0, 0))
 
             self.assertGreaterEqual(x, 3)

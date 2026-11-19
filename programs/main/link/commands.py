@@ -7,14 +7,20 @@ nothing else in the link changes.
 import asyncio
 from typing import Any, Awaitable, Callable, TypeAlias
 
+from programs.common.matrix_client import MatrixClient
+from programs.common.matrix_protocol import MAX_BRIGHTNESS, MIN_BRIGHTNESS, clean_brightness
 from programs.main.cube import CubePlayer, EngineError, ProgramError, read_program_file
 from programs.main.link.protocol import (
+    COMMAND_GET_BRIGHTNESS,
     COMMAND_MESSAGE,
     COMMAND_RUN_PROGRAM,
+    COMMAND_SET_BRIGHTNESS,
     COMMAND_STOP_PROGRAM,
+    ERROR_FAILED,
     ERROR_INVALID_PAYLOAD,
     ERROR_INVALID_PROGRAM,
     ERROR_UNKNOWN_COMMAND,
+    EVENT_BRIGHTNESS,
     EVENT_ERROR,
     EVENT_PROGRAM_STATUS,
     EVENT_REPLY,
@@ -134,10 +140,58 @@ def stop_program_handler(player: CubePlayer) -> Handler:
     return stop_program
 
 
-def default_commands(player: CubePlayer | None = None) -> CommandRouter:
+def brightness_event(percent: int) -> Message:
+    """
+    The "brightness" event: how bright the panels are.
+    """
+    return {"name": EVENT_BRIGHTNESS, "payload": {"percent": percent}}
+
+
+def set_brightness_handler(matrix: MatrixClient) -> Handler:
+    """
+    The handler of "set_brightness": asks the matrix program, through `matrix`, to change the brightness.
+    """
+
+    async def set_brightness(payload: dict[str, Any]) -> list[Message]:
+        """
+        Changes the brightness to the percent in the payload.
+        """
+        percent = clean_brightness(payload.get("percent"))
+
+        if percent is None:
+            raise CommandError(
+                ERROR_INVALID_PAYLOAD, f"The brightness must be a whole percent from {MIN_BRIGHTNESS} to {MAX_BRIGHTNESS}."
+            )
+
+        if not matrix.set_brightness(percent):
+            raise CommandError(ERROR_FAILED, "The LED panels are not ready.")
+
+        return [brightness_event(percent)]
+
+    return set_brightness
+
+
+def get_brightness_handler(matrix: MatrixClient) -> Handler:
+    """
+    The handler of "get_brightness": answers how bright the matrix program says the panels are.
+    """
+
+    async def get_brightness(payload: dict[str, Any]) -> list[Message]:
+        """
+        Answers the brightness now.
+        """
+        if matrix.brightness is None:
+            raise CommandError(ERROR_FAILED, "The LED panels are not ready.")
+
+        return [brightness_event(matrix.brightness)]
+
+    return get_brightness
+
+
+def default_commands(player: CubePlayer | None = None, matrix: MatrixClient | None = None) -> CommandRouter:
     """
     The router with every command the cube knows. The program commands need the `player` that shows programs on the
-    panels; without one the cube only chats.
+    panels, and the brightness commands the `matrix` connection; without them the cube only chats.
     """
     router = CommandRouter()
 
@@ -146,5 +200,9 @@ def default_commands(player: CubePlayer | None = None) -> CommandRouter:
     if player is not None:
         router.register(COMMAND_RUN_PROGRAM, run_program_handler(player))
         router.register(COMMAND_STOP_PROGRAM, stop_program_handler(player))
+
+    if matrix is not None:
+        router.register(COMMAND_SET_BRIGHTNESS, set_brightness_handler(matrix))
+        router.register(COMMAND_GET_BRIGHTNESS, get_brightness_handler(matrix))
 
     return router

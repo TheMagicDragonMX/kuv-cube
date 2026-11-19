@@ -6,7 +6,8 @@ How a program draws on the LED matrix: it asks the matrix program, which owns th
     client.show([fill(0, 0, 255)])
 
 The client keeps its scene and reconnects by itself, so the matrix program may start later than
-the caller or restart without anything being lost.
+the caller or restart without anything being lost. It also knows how bright the panels are
+(`brightness`, None until the matrix program says) and can change it (`set_brightness`).
 """
 
 import asyncio
@@ -66,6 +67,11 @@ class MatrixClient:
         Keeps the connection open and reconnects when it drops.
         """
 
+        self.brightness: int | None = None
+        """
+        How bright the panels are (percent), as the matrix program last said, or None before it has.
+        """
+
     def start(self) -> None:
         """
         Starts connecting in the background. Call it once, from inside the event loop.
@@ -86,6 +92,18 @@ class MatrixClient:
         Shows nothing, so the next program down shows through.
         """
         self.show([])
+
+    def set_brightness(self, percent: int) -> bool:
+        """
+        Asks the matrix program to change the brightness of the panels; it answers with the new one, which updates
+        `brightness`. Returns False when the matrix program is not connected.
+        """
+        if self._writer is None:
+            return False
+
+        self._send({"op": "brightness", "percent": percent})
+
+        return self._writer is not None
 
     async def close(self) -> None:
         """
@@ -135,9 +153,10 @@ class MatrixClient:
             self._send({"op": "show", "items": self._scene})
 
             try:
-                await reader.read()
+                while line := await reader.readline():
+                    self._receive(line)
 
-            except OSError:
+            except (OSError, ValueError):
                 pass
 
             finally:
@@ -146,3 +165,19 @@ class MatrixClient:
                 writer.close()
 
             await asyncio.sleep(RECONNECT_DELAY)
+
+    def _receive(self, line: bytes) -> None:
+        """
+        Takes in one message from the matrix program; for now only the brightness. Anything else is ignored.
+        """
+        try:
+            message = json.loads(line)
+
+        except ValueError:
+            return
+
+        if isinstance(message, dict) and message.get("op") == "brightness":
+            percent = message.get("percent")
+
+            if isinstance(percent, int) and not isinstance(percent, bool):
+                self.brightness = percent

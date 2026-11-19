@@ -50,6 +50,17 @@ COMMAND_STOP_PROGRAM = "stop_program"
 Command: stop the program; the cube keeps what it shows. No payload. Answered with "program_status".
 """
 
+COMMAND_SET_BRIGHTNESS = "set_brightness"
+"""
+Command: change how bright the LED panels are. Payload: `{"percent": int}`, a whole percent from 1 to 100. The cube
+remembers it across reboots. Answered with "brightness".
+"""
+
+COMMAND_GET_BRIGHTNESS = "get_brightness"
+"""
+Command: ask how bright the LED panels are. No payload. Answered with "brightness".
+"""
+
 EVENT_REPLY = "reply"
 """
 Event: the cube answers a text. Payload: `{"text": str}`.
@@ -58,6 +69,12 @@ Event: the cube answers a text. Payload: `{"text": str}`.
 EVENT_PROGRAM_STATUS = "program_status"
 """
 Event: whether the cube is running a program, after "run_program" or "stop_program". Payload: `{"running": bool}`.
+"""
+
+EVENT_BRIGHTNESS = "brightness"
+"""
+Event: how bright the LED panels are, after "set_brightness" or "get_brightness". Payload: `{"percent": int}`. The
+server sends it to every client of the cube, so they all show the same value.
 """
 
 EVENT_ERROR = "error"

@@ -67,7 +67,7 @@ async def run(program: Any) -> None:
 
     player = CubePlayer({"on_frame": lambda state: matrix.show(scene_of(state)), "on_error": report})
     settings = load_settings()
-    link = CubeLink(settings, default_commands(player)) if settings else None
+    link = CubeLink(settings, default_commands(player, matrix)) if settings else None
 
     if link:
         link.start()

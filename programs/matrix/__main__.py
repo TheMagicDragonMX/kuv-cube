@@ -9,6 +9,7 @@ import asyncio
 import logging
 import signal
 
+from programs.matrix.brightness import load_brightness, save_brightness
 from programs.matrix.screen import Screen
 from programs.matrix.server import MatrixServer
 
@@ -18,10 +19,11 @@ async def run() -> None:
     Opens the panels and serves until interrupted.
     """
     screen = Screen()
+    brightness = load_brightness()
 
-    screen.open()
+    screen.open(brightness)
 
-    server = MatrixServer(screen)
+    server = MatrixServer(screen, brightness=brightness, remember=save_brightness)
     finished = asyncio.Event()
 
     for signal_number in (signal.SIGINT, signal.SIGTERM):
