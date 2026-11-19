@@ -117,12 +117,13 @@ class CubePlayer:
         self._engine.set_environment(environment)
         self._present()
 
-    def play(self, program: Any) -> None:
+    def play(self, program: Any, checked: bool = False) -> None:
         """
         Checks the program and runs it from a clean cube. Raises a ProgramError, leaving everything as it was, if
-        the program is invalid.
+        the program is invalid. With `checked` the program already passed `validate_program` and is not checked
+        again (see `CubeEngine.load`).
         """
-        self._engine.load(program)
+        self._engine.load(program, checked)
         self._engine.start(self._loop.now())
         self._loop.start(self._tick)
         self._sync()

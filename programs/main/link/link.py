@@ -30,6 +30,11 @@ RECONNECT_MAX = 30.0
 Longest wait between tries; the wait doubles from RECONNECT_MIN up to this.
 """
 
+MAX_MESSAGE_BYTES = 64 * 1024 * 1024
+"""
+Largest frame the cube takes. The server sends saved creations whole (`run_creation`), and those can be several MB.
+"""
+
 PING_INTERVAL = 20.0
 """
 Seconds between the pings that notice a dead connection (WiFi drops do not close sockets by themselves).
@@ -96,6 +101,7 @@ class CubeLink:
                     self._settings["url"],
                     additional_headers={"Authorization": f"Bearer {self._settings['secret']}"},
                     ping_interval=PING_INTERVAL,
+                    max_size=MAX_MESSAGE_BYTES,
                 ) as socket:
                     logger.info("Linked to the server as cube %s", self._settings["cube_id"])
 
@@ -117,7 +123,8 @@ class CubeLink:
         Does every command that arrives until the connection ends.
         """
         async for frame in socket:
-            message = parse(frame)
+            # A program can be several MB of JSON: it is parsed in a thread so the link keeps answering pings.
+            message = await asyncio.to_thread(parse, frame)
 
             if message is None:
                 logger.warning("Ignored a frame that is not a message")

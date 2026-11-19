@@ -84,7 +84,7 @@ The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/
 | `run_program` | a program file: `{"version": 1, "program": {...}, "environment": {...}}`, what the editor's "Cubo real" button sends | `program_status` `{"running": bool}`, or `error` with code `invalid_program` (the cube keeps what it ran) |
 | `stop_program` | none | `program_status` |
 
-A program from the link replaces the one the cube runs. The program file is read by `programs/main/cube/program_file/` (mirror of the web app's `program-file.ts`). Messages are limited to 1 MiB by kuv-api, so a program with many pictures may be too big to send; the editor says so instead of sending it. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
+A program from the link replaces the one the cube runs. The program file is read by `programs/main/cube/program_file/` (mirror of the web app's `program-file.ts`). kuv-api takes at most 1 MiB from a browser, so the editor's button only works for small programs. Saved creations go another way: the web app sends `run_creation` with the creation's id, and kuv-api sends its `program.json` to the cube as `run_program`. The cube takes frames up to 64 MiB (`MAX_MESSAGE_BYTES` in `link.py`) and reads them in a thread, so a program of several MB does not stall the link. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
 
 ## Configuration
 

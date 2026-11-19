@@ -421,12 +421,15 @@ class CubeEngine:
 
         return {"face": FACE_NAME[placement["face"]], "x": placement["x"], "y": placement["y"]}
 
-    def load(self, program: Any) -> None:
+    def load(self, program: Any, checked: bool = False) -> None:
         """
         Checks a program and keeps it, ready to start. Stops whatever was running and blanks the cube. If the
         program is invalid it raises a ProgramError and the engine is left as it was.
+
+        `checked` says the program already passed `validate_program` (in a thread, for a big one), so it is not
+        checked again.
         """
-        self._program = validate_program(program)
+        self._program = program if checked else validate_program(program)
 
         self._build()
 

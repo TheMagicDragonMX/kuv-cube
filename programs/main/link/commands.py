@@ -4,6 +4,7 @@ the payload and returns the events to send back, so new commands (a new program,
 nothing else in the link changes.
 """
 
+import asyncio
 from typing import Any, Awaitable, Callable, TypeAlias
 
 from programs.main.cube import CubePlayer, EngineError, ProgramError, read_program_file
@@ -103,10 +104,11 @@ def run_program_handler(player: CubePlayer) -> Handler:
         Runs the program file in the payload, replacing what runs. An invalid file leaves the cube as it was.
         """
         try:
-            loaded = read_program_file(payload)
+            # Checking a big program file takes a while, so it runs in a thread; only playing it touches the player.
+            loaded = await asyncio.to_thread(read_program_file, payload)
 
             player.set_environment(loaded.get("environment"))
-            player.play(loaded["program"])
+            player.play(loaded["program"], checked=True)
 
         except (ProgramError, EngineError) as error:
             raise CommandError(ERROR_INVALID_PROGRAM, str(error)) from error

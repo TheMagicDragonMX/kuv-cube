@@ -170,6 +170,42 @@ class CubeLinkTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(answer["name"], "reply")
         self.assertEqual(answer["replyTo"], "42")
 
+    async def test_takes_a_program_bigger_than_a_mebibyte(self) -> None:
+        """
+        A saved creation the server sends can be several MB: the cube receives it, runs it and answers.
+        """
+        answers: asyncio.Future = asyncio.get_running_loop().create_future()
+        background = ["#203040"] * 4096
+        program_file = {
+            "version": 1,
+            "program": {"version": 1, "scripts": [{"trigger": {"type": "start"}, "blocks": [{"op": "wait", "seconds": 60}]}]},
+            "environment": {"backgrounds": [{"name": f"b{index}", "images": {"FRONT": background}} for index in range(40)]},
+        }
+        frame = json.dumps({"name": "run_program", "id": "7", "payload": program_file})
+
+        self.assertGreater(len(frame), 1024 * 1024)
+
+        async def server(socket) -> None:
+            await socket.send(frame)
+            answers.set_result(json.loads(await socket.recv()))
+
+        player = CubePlayer()
+
+        async with serve(server, "127.0.0.1", 0, max_size=None) as running:
+            port = running.sockets[0].getsockname()[1]
+            link = CubeLink({"url": f"ws://127.0.0.1:{port}/ws/cube?cubeId=c", "secret": "s", "cube_id": "c"}, default_commands(player))
+
+            link.start()
+
+            try:
+                answer = await asyncio.wait_for(answers, 10)
+
+            finally:
+                await link.close()
+                player.dispose()
+
+        self.assertEqual(answer, {"name": "program_status", "payload": {"running": True}, "replyTo": "7"})
+
 
 if __name__ == "__main__":
     unittest.main()
