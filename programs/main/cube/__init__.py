@@ -23,6 +23,7 @@ Each layer does one thing and only uses the layers above it in this list. The da
     commands/     Looks up a command in `blocks/` and applies it to the world
     runtime/      The interpreter (runs one script) and the scheduler (decides when each script runs)
     environment/  The stage a program runs on: the picture of each face
+    program_file/ A program and its environment as one JSON document, the one the web app sends
     renderer/     Turns the world into pixels
     engine/       Puts the layers together; the engine takes the time as an argument, the player has a clock
     view/         Turns a state into the scene the matrix program draws on the panels
@@ -55,6 +56,7 @@ from programs.main.cube.program.program import (
     Trigger,
 )
 from programs.main.cube.program.validate_program import validate_program
+from programs.main.cube.program_file.program_file import PROGRAM_FILE_VERSION, LoadedProgramFile, read_program_file
 from programs.main.cube.runtime.scheduler import ScriptError
 from programs.main.cube.state.cube_state import FACE_RESOLUTION, Color, CubeState, Face
 from programs.main.cube.view.panel_layout import scene_of
@@ -76,6 +78,8 @@ __all__ = [
     "Face",
     "FaceName",
     "HeadingName",
+    "LoadedProgramFile",
+    "PROGRAM_FILE_VERSION",
     "Program",
     "ProgramConfig",
     "ProgramError",
@@ -88,6 +92,7 @@ __all__ = [
     "format_color",
     "parse_color",
     "pixelate",
+    "read_program_file",
     "scene_of",
     "validate_program",
 ]

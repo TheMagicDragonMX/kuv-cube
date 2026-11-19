@@ -10,6 +10,7 @@ from unittest import mock
 
 from websockets.asyncio.server import serve
 
+from programs.main.cube import CubePlayer
 from programs.main.link import CubeLink, default_commands, load_settings
 from programs.main.link.commands import CommandRouter
 
@@ -41,6 +42,72 @@ class CommandRouterTest(unittest.IsolatedAsyncioTestCase):
         A command nobody registered is answered with an unknown_command error.
         """
         events = await CommandRouter().handle({"name": "dance"})
+
+        self.assertEqual(events[0]["payload"]["code"], "unknown_command")
+
+
+class ProgramCommandsTest(unittest.IsolatedAsyncioTestCase):
+    """
+    Running and stopping programs sent through the link.
+    """
+
+    PROGRAM_FILE = {
+        "version": 1,
+        "program": {"version": 1, "scripts": [{"trigger": {"type": "start"}, "blocks": [{"op": "wait", "seconds": 60}]}]},
+    }
+    """
+    A program file whose program keeps running for a minute.
+    """
+
+    async def asyncSetUp(self) -> None:
+        """
+        A player without panels, and the router that drives it.
+        """
+        self.player = CubePlayer()
+        self.router = default_commands(self.player)
+
+    async def asyncTearDown(self) -> None:
+        """
+        Stops the player's timer.
+        """
+        self.player.dispose()
+
+    async def test_run_program_starts_it(self) -> None:
+        """
+        A valid program file runs, and the answer says so.
+        """
+        events = await self.router.handle({"name": "run_program", "payload": self.PROGRAM_FILE})
+
+        self.assertEqual(events, [{"name": "program_status", "payload": {"running": True}}])
+        self.assertTrue(self.player.running)
+
+    async def test_stop_program_stops_it(self) -> None:
+        """
+        Stopping after a run leaves nothing running.
+        """
+        await self.router.handle({"name": "run_program", "payload": self.PROGRAM_FILE})
+
+        events = await self.router.handle({"name": "stop_program"})
+
+        self.assertEqual(events, [{"name": "program_status", "payload": {"running": False}}])
+        self.assertFalse(self.player.running)
+
+    async def test_invalid_program_is_an_error_and_keeps_what_runs(self) -> None:
+        """
+        A broken program file is answered with invalid_program, and the program that ran goes on.
+        """
+        await self.router.handle({"name": "run_program", "payload": self.PROGRAM_FILE})
+
+        events = await self.router.handle({"name": "run_program", "payload": {"version": 1, "program": {}}})
+
+        self.assertEqual(events[0]["payload"]["code"], "invalid_program")
+        self.assertTrue(self.player.running)
+
+    async def test_without_player_programs_are_unknown(self) -> None:
+        """
+        A router made without a player does not take programs.
+        """
+        events = await default_commands().handle({"name": "run_program", "payload": self.PROGRAM_FILE})
 
         self.assertEqual(events[0]["payload"]["code"], "unknown_command")
 

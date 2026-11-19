@@ -6,7 +6,20 @@ nothing else in the link changes.
 
 from typing import Any, Awaitable, Callable, TypeAlias
 
-from programs.main.link.protocol import COMMAND_MESSAGE, ERROR_INVALID_PAYLOAD, ERROR_UNKNOWN_COMMAND, EVENT_ERROR, EVENT_REPLY, CommandError, Message
+from programs.main.cube import CubePlayer, EngineError, ProgramError, read_program_file
+from programs.main.link.protocol import (
+    COMMAND_MESSAGE,
+    COMMAND_RUN_PROGRAM,
+    COMMAND_STOP_PROGRAM,
+    ERROR_INVALID_PAYLOAD,
+    ERROR_INVALID_PROGRAM,
+    ERROR_UNKNOWN_COMMAND,
+    EVENT_ERROR,
+    EVENT_PROGRAM_STATUS,
+    EVENT_REPLY,
+    CommandError,
+    Message,
+)
 
 
 Handler: TypeAlias = Callable[[dict[str, Any]], Awaitable[list[Message]]]
@@ -73,12 +86,63 @@ async def answer_message(payload: dict[str, Any]) -> list[Message]:
     return [{"name": EVENT_REPLY, "payload": {"text": f"Beep boop! The cube heard: {text.strip()}"}}]
 
 
-def default_commands() -> CommandRouter:
+def program_status(player: CubePlayer) -> Message:
     """
-    The router with every command the cube knows.
+    The "program_status" event: whether the player runs a program now.
+    """
+    return {"name": EVENT_PROGRAM_STATUS, "payload": {"running": player.running}}
+
+
+def run_program_handler(player: CubePlayer) -> Handler:
+    """
+    The handler of "run_program": shows the environment of the program file and runs its program on `player`.
+    """
+
+    async def run_program(payload: dict[str, Any]) -> list[Message]:
+        """
+        Runs the program file in the payload, replacing what runs. An invalid file leaves the cube as it was.
+        """
+        try:
+            loaded = read_program_file(payload)
+
+            player.set_environment(loaded.get("environment"))
+            player.play(loaded["program"])
+
+        except (ProgramError, EngineError) as error:
+            raise CommandError(ERROR_INVALID_PROGRAM, str(error)) from error
+
+        return [program_status(player)]
+
+    return run_program
+
+
+def stop_program_handler(player: CubePlayer) -> Handler:
+    """
+    The handler of "stop_program": stops what `player` runs.
+    """
+
+    async def stop_program(payload: dict[str, Any]) -> list[Message]:
+        """
+        Stops the scripts; the cube keeps what it shows.
+        """
+        player.stop()
+
+        return [program_status(player)]
+
+    return stop_program
+
+
+def default_commands(player: CubePlayer | None = None) -> CommandRouter:
+    """
+    The router with every command the cube knows. The program commands need the `player` that shows programs on the
+    panels; without one the cube only chats.
     """
     router = CommandRouter()
 
     router.register(COMMAND_MESSAGE, answer_message)
+
+    if player is not None:
+        router.register(COMMAND_RUN_PROGRAM, run_program_handler(player))
+        router.register(COMMAND_STOP_PROGRAM, stop_program_handler(player))
 
     return router

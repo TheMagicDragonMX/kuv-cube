@@ -39,9 +39,25 @@ COMMAND_MESSAGE = "message"
 Command: a user wrote a text to the cube. Payload: `{"text": str}`.
 """
 
+COMMAND_RUN_PROGRAM = "run_program"
+"""
+Command: run a program on the cube, replacing the one it runs. Payload: a program file, `{"version": 1, "program": {...},
+"environment": {...}}` (see `programs/main/cube/program_file/`). Answered with "program_status".
+"""
+
+COMMAND_STOP_PROGRAM = "stop_program"
+"""
+Command: stop the program; the cube keeps what it shows. No payload. Answered with "program_status".
+"""
+
 EVENT_REPLY = "reply"
 """
 Event: the cube answers a text. Payload: `{"text": str}`.
+"""
+
+EVENT_PROGRAM_STATUS = "program_status"
+"""
+Event: whether the cube is running a program, after "run_program" or "stop_program". Payload: `{"running": bool}`.
 """
 
 EVENT_ERROR = "error"
@@ -57,6 +73,11 @@ Error code: the cube does not know the command.
 ERROR_INVALID_PAYLOAD = "invalid_payload"
 """
 Error code: the command's payload is not what the command needs.
+"""
+
+ERROR_INVALID_PROGRAM = "invalid_program"
+"""
+Error code: the program sent with "run_program" is not one the cube can run; the message says where.
 """
 
 ERROR_FAILED = "failed"

@@ -76,7 +76,15 @@ When the server is configured, `programs.main` keeps a WebSocket open to `kuv-ap
 
 Its settings are `KUV_SERVER_URL`, `KUV_CUBE_SECRET` and `KUV_CUBE_ID`, see [Configuration](#configuration).
 
-The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/app/cube/link/protocol.ts` and `CubeMessage` in kuv-api). A command is a handler registered in `programs/main/link/commands.py`, which gets the payload and returns the events to send back. For now the only one is `message`, which answers with a mock `reply`. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
+The messages are in `programs/main/link/protocol.py` (mirror of `kuv-client/src/app/cube/link/protocol.ts` and `CubeMessage` in kuv-api). A command is a handler registered in `programs/main/link/commands.py`, which gets the payload and returns the events to send back:
+
+| Command | Payload | Answer |
+| --- | --- | --- |
+| `message` | `{"text": str}` | a mock `reply` |
+| `run_program` | a program file: `{"version": 1, "program": {...}, "environment": {...}}`, what the editor's "Cubo real" button sends | `program_status` `{"running": bool}`, or `error` with code `invalid_program` (the cube keeps what it ran) |
+| `stop_program` | none | `program_status` |
+
+A program from the link replaces the one the cube runs. The program file is read by `programs/main/cube/program_file/` (mirror of the web app's `program-file.ts`). Messages are limited to 1 MiB by kuv-api, so a program with many pictures may be too big to send; the editor says so instead of sending it. The cube id is what the user types in the web app's `/cube-chat` page. Tests: `tests/test_link.py`.
 
 ## Configuration
 
