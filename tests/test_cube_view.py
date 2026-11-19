@@ -118,13 +118,14 @@ class PanelLayoutTest(unittest.TestCase):
 
     def test_slots_follow_the_wiring(self) -> None:
         """
-        Front, right and back in series on the first output; left and top on the second.
+        Front, right and back in series on the first output; left and top on the second. Each chain starts at the right
+        column, where the panel closest to the Pi shows.
         """
         slots = {face: (slot["column"], slot["row"]) for face, slot in PANEL_SLOTS.items()}
 
         self.assertEqual(
             slots,
-            {Face.FRONT: (0, 0), Face.RIGHT: (1, 0), Face.BACK: (2, 0), Face.LEFT: (0, 1), Face.TOP: (1, 1)},
+            {Face.FRONT: (2, 0), Face.RIGHT: (1, 0), Face.BACK: (0, 0), Face.LEFT: (2, 1), Face.TOP: (1, 1)},
         )
 
     def test_rotates_a_face_clockwise(self) -> None:
@@ -211,7 +212,8 @@ class EndToEndTest(unittest.IsolatedAsyncioTestCase):
 
             player.dispose()
 
-            front = next(item for item in screen.current if item["x"] == 0 and item["y"] == 0)
+            front_slot = PANEL_SLOTS[Face.FRONT]
+            front = next(item for item in screen.current if (item["x"], item["y"]) == (front_slot["column"] * 64, front_slot["row"] * 64))
             top_slot = PANEL_SLOTS[Face.TOP]
             top = next(item for item in screen.current if (item["x"], item["y"]) == (top_slot["column"] * 64, top_slot["row"] * 64))
             x = next(x for x in range(64) if pixel_of(front, x, 5) == (255, 0, 0))

@@ -58,7 +58,7 @@ player = CubePlayer({"on_frame": lambda state: matrix.show(scene_of(state))})
 player.play(program)      # program: the JSON as a dict; raises ProgramError (with the path of the problem) if invalid
 ```
 
-The web app's `CubeView` (3D) has no counterpart; its place is `view/panel_layout.py`, which turns the pixel buffer into one 64×64 `image` item per lit face for the matrix program. `PANEL_SLOTS` there follows the wiring: front, right and back in series on the first output of the bonnet, left and top on the second (a 3×2 grid, set by `PANEL_CHAIN_LENGTH` and `PANEL_PARALLEL` in `programs/matrix/screen.py`). A panel mounted rotated gets its quarter turns there.
+The web app's `CubeView` (3D) has no counterpart; its place is `view/panel_layout.py`, which turns the pixel buffer into one 64×64 `image` item per lit face for the matrix program. `PANEL_SLOTS` there follows the wiring: front, right and back in series on the first output of the bonnet, left and top on the second. The panel closest to the Pi shows the right end of its row, so each chain fills the grid from the right (a 3×2 grid, set by `PANEL_CHAIN_LENGTH` and `PANEL_PARALLEL` in `programs/matrix/screen.py`). A panel mounted rotated gets its quarter turns there.
 
 Not ported: the example programs (`examples/` in the web app), the video recorder (`recorder/`) and the 3D parts (`view/`, `component/`).
 
