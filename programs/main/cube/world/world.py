@@ -10,12 +10,30 @@ The world never draws anything and never decides when things happen; it only sto
 that goes up on every change, so the renderer can skip frames where nothing changed.
 """
 
-from typing import TypedDict, ValuesView
+from typing import Sequence, TypedDict, ValuesView
 
 from programs.main.cube.errors import EngineError
 from programs.main.cube.geometry.geometry import CubeGeometry, GeometryConfig, Pose
+from programs.main.cube.program.program import FaceName
 from programs.main.cube.state.cube_state import Color, CubeState
-from programs.main.cube.world.cube_object import CubeObject
+from programs.main.cube.world.cube_object import CubeObject, ShapePixel
+
+
+class NamedBackground(TypedDict):
+    """
+    A background the program can switch to: a name, and the picture of each face that has one
+    (`FACE_RESOLUTION * FACE_RESOLUTION` colors, row after row). A face without a picture is dark.
+    """
+
+    name: str
+    """
+    What the blocks call it.
+    """
+
+    images: dict[FaceName, Sequence[Color]]
+    """
+    The picture of each face that has one.
+    """
 
 
 class ObjectChanges(TypedDict, total=False):
@@ -36,6 +54,16 @@ class ObjectChanges(TypedDict, total=False):
     visible: bool
     """
     Whether the object is drawn.
+    """
+
+    shape: tuple[ShapePixel, ...]
+    """
+    Pixels the object is made of, around its center.
+    """
+
+    costume: str
+    """
+    Name of the costume it wears.
     """
 
 
@@ -59,6 +87,17 @@ class World:
         Persistent layer under the objects. It is written by the environment (the pictures the user puts on the
         faces before running) and by the background blocks (a program changing what is behind the objects). The
         renderer copies it first on every frame, so what is painted here stays on the cube.
+        """
+
+        self.backgrounds: list[NamedBackground] = []
+        """
+        The backgrounds the program can switch to, in order (the environment gives them). The background blocks
+        paint one of them onto `background`.
+        """
+
+        self.current_background: str | None = None
+        """
+        Name of the background on the cube, or None when none of `backgrounds` is.
         """
 
         self._objects: dict[str, CubeObject] = {}

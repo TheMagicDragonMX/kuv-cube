@@ -1,16 +1,17 @@
 """
 BLOCK: create (object).
 
-Creates a new visible object. Without `pixels` it is a single pixel.
+Creates a new visible object. Without `pixels` it is a single pixel. With `costumes` it can switch looks later (see
+`set_costume.py`); it starts with its own color and pixels, which are those of the first costume.
 """
 
-from typing import NotRequired, TypedDict, Literal
+from typing import Literal, NotRequired, TypedDict
 
 from programs.main.cube.blocks.block_definition import CommandDefinition
 from programs.main.cube.blocks.fields import FIELD, optional
 from programs.main.cube.program.names import FACE_BY_NAME, HEADING_BY_NAME, parse_color
-from programs.main.cube.program.program import ColorValue, FaceName, HeadingName, ShapePixelDefinition
-from programs.main.cube.world.cube_object import SINGLE_PIXEL
+from programs.main.cube.program.program import ColorValue, CostumeDefinition, FaceName, HeadingName, ShapePixelDefinition
+from programs.main.cube.world.cube_object import SINGLE_PIXEL, CubeObject, ShapePixel
 from programs.main.cube.world.world import World
 
 
@@ -64,39 +65,57 @@ class CreateCommand(TypedDict):
     The cells of the shape around its center. Defaults to a single pixel.
     """
 
+    costumes: NotRequired[list[CostumeDefinition]]
+    """
+    The looks the object can switch between. The first one is how it starts, so `color` and `pixels` are the ones of
+    the first costume.
+    """
+
+
+def shape_of(pixels: list[ShapePixelDefinition] | None) -> tuple[ShapePixel, ...]:
+    """
+    The shape an object is drawn with, from the pixels of a block. Without pixels it is a single pixel.
+    """
+    if pixels is None:
+        return SINGLE_PIXEL
+
+    return tuple(
+        {"dx": pixel["dx"], "dy": pixel["dy"], "color": parse_color(pixel["color"]) if "color" in pixel else None}
+        for pixel in pixels
+    )
+
 
 def apply(world: World, command: CreateCommand) -> None:
     """
-    Adds a visible object, with the shape, pose and color of the command.
+    Adds a visible object, with the shape, pose and color of the command, and its costumes.
     """
-    pixels = command.get("pixels")
     heading = command.get("heading")
 
-    if pixels is None:
-        shape = SINGLE_PIXEL
+    cube_object: CubeObject = {
+        "name": command["name"],
+        "shape": shape_of(command.get("pixels")),
+        "pose": world.geometry.place(
+            {
+                "face": FACE_BY_NAME[command["face"]],
+                "x": command["x"],
+                "y": command["y"],
+                "heading": HEADING_BY_NAME[heading] if heading else None,
+            }
+        ),
+        "color": parse_color(command["color"]),
+        "visible": True,
+    }
 
-    else:
-        shape = tuple(
-            {"dx": pixel["dx"], "dy": pixel["dy"], "color": parse_color(pixel["color"]) if "color" in pixel else None}
-            for pixel in pixels
+    costumes = command.get("costumes")
+
+    if costumes is not None:
+        cube_object["costumes"] = tuple(
+            {"name": costume["name"], "color": parse_color(costume["color"]), "shape": shape_of(costume.get("pixels"))}
+            for costume in costumes
         )
+        cube_object["costume"] = costumes[0]["name"]
 
-    world.add(
-        {
-            "name": command["name"],
-            "shape": shape,
-            "pose": world.geometry.place(
-                {
-                    "face": FACE_BY_NAME[command["face"]],
-                    "x": command["x"],
-                    "y": command["y"],
-                    "heading": HEADING_BY_NAME[heading] if heading else None,
-                }
-            ),
-            "color": parse_color(command["color"]),
-            "visible": True,
-        }
-    )
+    world.add(cube_object)
 
 
 create_block: CommandDefinition = {
@@ -108,6 +127,7 @@ create_block: CommandDefinition = {
         "color": FIELD["color"],
         "heading": optional(FIELD["heading"]),
         "pixels": optional(FIELD["shape"]),
+        "costumes": optional(FIELD["costumes"]),
     },
     "apply": apply,
 }

@@ -83,6 +83,29 @@ class ShapePixelDefinition(TypedDict):
     """
 
 
+class CostumeDefinition(TypedDict):
+    """
+    One look of an object: a name the blocks use, a color and a shape, like the ones of a `create` block. An object
+    with several costumes can switch between them while the program runs, which makes animations out of a single
+    object.
+    """
+
+    name: str
+    """
+    What the blocks call the costume. Not repeated within the object.
+    """
+
+    color: ColorValue
+    """
+    The object's color with this costume.
+    """
+
+    pixels: NotRequired[list[ShapePixelDefinition]]
+    """
+    The cells of the shape around its center. Defaults to a single pixel.
+    """
+
+
 class StartTrigger(TypedDict):
     """
     Runs once, as soon as the program starts.

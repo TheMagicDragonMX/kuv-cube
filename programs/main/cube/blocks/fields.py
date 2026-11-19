@@ -12,7 +12,8 @@ from typing import Literal, NotRequired, TypeAlias, TypedDict
 
 
 FieldKind: TypeAlias = Literal[
-    "text", "face", "faces", "heading", "step", "color", "integer", "count", "seconds", "shape", "image", "blocks"
+    "text", "face", "faces", "heading", "step", "color", "integer", "count", "seconds", "shape", "costumes", "image",
+    "blocks",
 ]
 """
 Kind of value a field takes.
@@ -27,6 +28,7 @@ Kind of value a field takes.
     count     whole number, zero or more
     seconds   number, zero or more
     shape     non-empty list of { dx, dy, color? }: the pixels of an object
+    costumes  non-empty list of { name, color, pixels? }, names not repeated: the looks of an object
     image     the pixels of one face: FACE_RESOLUTION * FACE_RESOLUTION '#RRGGBB', row after row
     blocks    nested list of blocks
 """
@@ -64,6 +66,7 @@ FIELD: dict[FieldKind, FieldSchema] = {
     "count": {"kind": "count"},
     "seconds": {"kind": "seconds"},
     "shape": {"kind": "shape"},
+    "costumes": {"kind": "costumes"},
     "image": {"kind": "image"},
     "blocks": {"kind": "blocks"},
 }

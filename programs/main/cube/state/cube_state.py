@@ -61,6 +61,21 @@ Color: TypeAlias = int
 A color packed as 0xRRGGBB. Black (0x000000) means the LED is off.
 """
 
+def scale_color(color: Color, level: float) -> Color:
+    """
+    The color dimmed to a share of its intensity: 1 leaves it as it is, 0 turns it off. Each of the three channels is
+    scaled, so the hue stays.
+    """
+    if level >= 1:
+        return color
+
+    red = int(((color >> 16) & 0xFF) * level + 0.5)
+    green = int(((color >> 8) & 0xFF) * level + 0.5)
+    blue = int((color & 0xFF) * level + 0.5)
+
+    return (red << 16) | (green << 8) | blue
+
+
 PIXEL_TYPE_CODE = "I"
 """
 Type code of the array that holds the pixels: unsigned 32-bit integers.
@@ -130,6 +145,23 @@ class CubeState:
         start a frame from a saved image (the renderer does it with the background).
         """
         self._pixels[:] = other._pixels
+        self.version += 1
+
+    def dim_face(self, face: int, level: float) -> None:
+        """
+        Dims every pixel of one face to a share of its intensity (see `scale_color`).
+        """
+        if level >= 1:
+            return
+
+        # Every byte of a pixel is one channel (the fourth one is always 0), so one table that scales a byte does the
+        # whole face in a single pass, without a Python loop over its pixels.
+        table = bytes(int(value * level + 0.5) for value in range(256))
+        size = FACE_RESOLUTION * FACE_RESOLUTION
+        start, end = face * size * 4, (face + 1) * size * 4
+        raw = memoryview(self._pixels).cast("B")
+
+        raw[start:end] = raw[start:end].tobytes().translate(table)
         self.version += 1
 
     def face_pixels(self, face: int) -> memoryview:

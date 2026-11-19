@@ -22,7 +22,7 @@ Each layer does one thing and only uses the layers above it in this list. The da
     program/      The shape of a program, names to engine values, and the validator
     commands/     Looks up a command in `blocks/` and applies it to the world
     runtime/      The interpreter (runs one script) and the scheduler (decides when each script runs)
-    environment/  The stage a program runs on: the picture of each face
+    environment/  The stage a program runs on: the picture of each face, the backgrounds to switch to, the brightness
     program_file/ A program and its environment as one JSON document, the one the web app sends
     renderer/     Turns the world into pixels
     engine/       Puts the layers together; the engine takes the time as an argument, the player has a clock
@@ -57,14 +57,17 @@ from programs.main.cube.program.program import (
 )
 from programs.main.cube.program.validate_program import validate_program
 from programs.main.cube.program_file.program_file import PROGRAM_FILE_VERSION, LoadedProgramFile, read_program_file
+from programs.main.cube.renderer.renderer import DEFAULT_BRIGHTNESS, Brightness
 from programs.main.cube.runtime.scheduler import ScriptError
 from programs.main.cube.state.cube_state import FACE_RESOLUTION, Color, CubeState, Face
 from programs.main.cube.view.panel_layout import scene_of
+from programs.main.cube.world.world import NamedBackground
 
 
 __all__ = [
     "BackgroundImages",
     "Block",
+    "Brightness",
     "Color",
     "CreateCommand",
     "CubeEngine",
@@ -72,6 +75,7 @@ __all__ = [
     "CubePlayer",
     "CubePlayerOptions",
     "CubeState",
+    "DEFAULT_BRIGHTNESS",
     "EngineError",
     "Environment",
     "FACE_RESOLUTION",
@@ -79,6 +83,7 @@ __all__ = [
     "FaceName",
     "HeadingName",
     "LoadedProgramFile",
+    "NamedBackground",
     "PROGRAM_FILE_VERSION",
     "Program",
     "ProgramConfig",

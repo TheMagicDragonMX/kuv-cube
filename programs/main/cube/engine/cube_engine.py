@@ -260,11 +260,13 @@ class CubeEngine:
         """
         Changes the environment and shows it right away, even if nothing is running. A program that is running is
         not restarted: the new pictures are painted on its background, and a face whose picture was removed goes
-        black. Raises an EngineError, leaving everything as it was, if a picture is not the size of a face.
+        black. Raises an EngineError, leaving everything as it was, if a picture is not the size of a face or two
+        backgrounds have the same name.
         """
         paint_environment(self._world, environment, self._environment)
 
         self._environment = environment
+        self._renderer.set_brightness((environment or {}).get("brightness"))
         self._renderer.render()
 
     def move_object(self, name: str, face: FaceName, x: int, y: int, heading: HeadingName | None = None) -> None:
@@ -485,6 +487,7 @@ class CubeEngine:
         self._renderer = Renderer(self._world, self.state)
         self._scheduler = Scheduler(self._world, self._program["scripts"], self._report)
 
+        self._renderer.set_brightness((self._environment or {}).get("brightness"))
         paint_environment(self._world, self._environment)
 
         for cube_object in self._program.get("objects", []):

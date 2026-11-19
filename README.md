@@ -60,7 +60,7 @@ player.play(program)      # program: the JSON as a dict; raises ProgramError (wi
 
 The web app's `CubeView` (3D) has no counterpart; its place is `view/panel_layout.py`, which turns the pixel buffer into one 64×64 `image` item per lit face for the matrix program. **`PANEL_SLOTS` there is a placeholder**: set the slot (column, row of the 2×3 grid of panels) and the rotation of every face to how the panels are really wired.
 
-Not ported: the example programs (`examples/` in the web app) and the 3D parts (`view/`, `component/`).
+Not ported: the example programs (`examples/` in the web app), the video recorder (`recorder/`) and the 3D parts (`view/`, `component/`).
 
 Trying it on the Pi, with the matrix program running (Ctrl+C to stop):
 

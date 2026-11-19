@@ -4,7 +4,7 @@ LAYER: blocks (registry).
 Every block a user can put in a script, organized by category, one file per block:
 
     object/       change the objects of the world       create, move, moveTo, setColor, ...
-    background/   change what is behind the objects     setBackgroundImage, setBackgroundColor
+    background/   change what is behind the objects     setBackgroundImage, setBackground, ...
     control/      decide when other blocks run          wait, repeat, forever
 
 This file joins the categories. The rest of the engine asks it for the types (`Block`, `Command`) and for the

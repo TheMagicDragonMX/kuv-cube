@@ -40,9 +40,9 @@ class ReadProgramFileTest(unittest.TestCase):
 
         self.assertEqual(loaded["environment"]["background"]["FRONT"][0], 0xFF0000)
 
-    def test_settings_the_engine_does_not_use_are_checked_and_left_out(self) -> None:
+    def test_backgrounds_and_brightness_are_kept(self) -> None:
         """
-        Named backgrounds, the start background and the brightness are accepted but not passed on.
+        Named backgrounds (with packed colors), the start background and the brightness reach the environment.
         """
         environment = {
             "backgrounds": [{"name": "Background 1", "images": {"FRONT": RED_FACE}}],
@@ -50,9 +50,12 @@ class ReadProgramFileTest(unittest.TestCase):
             "brightness": {"background": 0.5},
         }
 
-        loaded = read_program_file({"version": 1, "program": PROGRAM, "environment": environment})
+        loaded = read_program_file({"version": 1, "program": PROGRAM, "environment": environment})["environment"]
 
-        self.assertEqual(loaded["environment"], {})
+        self.assertEqual(loaded["backgrounds"][0]["name"], "Background 1")
+        self.assertEqual(loaded["backgrounds"][0]["images"]["FRONT"][0], 0xFF0000)
+        self.assertEqual(loaded["startBackground"], "Background 1")
+        self.assertEqual(loaded["brightness"], {"background": 0.5})
 
     def test_wrong_version_is_rejected(self) -> None:
         """

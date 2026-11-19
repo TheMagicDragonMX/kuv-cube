@@ -12,18 +12,16 @@ It is what the web app sends to the cube and what the API keeps as `program.json
 
 In a file every picture is a list of colors written `#RRGGBB`; the engine wants packed numbers. This file checks a
 file and converts its pictures.
-
-The engine here only knows the pictures of the faces (`background`). The named backgrounds, the start background and
-the brightness of the file are checked like the web app does, but left out of the environment it returns.
 """
 
-from typing import Any, NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict, cast
 
 from programs.main.cube.environment.environment import BackgroundImages, Environment
 from programs.main.cube.errors import ProgramError
 from programs.main.cube.program.names import FACE_BY_NAME, is_color_value, parse_color
 from programs.main.cube.program.program import Program
 from programs.main.cube.program.validate_program import validate_program
+from programs.main.cube.renderer.renderer import Brightness
 from programs.main.cube.state.cube_state import FACE_RESOLUTION
 
 
@@ -74,7 +72,7 @@ def read_program_file(value: Any) -> LoadedProgramFile:
 
 def read_environment(value: Any) -> Environment:
     """
-    Checks the environment of a file and turns the pictures of its faces into packed colors.
+    Checks the environment of a file and turns its pictures into packed colors.
     """
     file = expect_object(value, "environment")
     environment: Environment = {}
@@ -86,6 +84,8 @@ def read_environment(value: Any) -> Environment:
         if not isinstance(file["backgrounds"], list):
             raise ProgramError("environment.backgrounds: must be a list of backgrounds")
 
+        environment["backgrounds"] = []
+
         for index, item in enumerate(file["backgrounds"]):
             path = f"environment.backgrounds[{index}]"
             background = expect_object(item, path)
@@ -93,13 +93,18 @@ def read_environment(value: Any) -> Environment:
             if not isinstance(background.get("name"), str) or not background["name"]:
                 raise ProgramError(f"{path}.name: must be a non-empty text")
 
-            read_images(background.get("images"), f"{path}.images")
+            images = read_images(background.get("images"), f"{path}.images")
 
-    if "startBackground" in file and not isinstance(file["startBackground"], str):
-        raise ProgramError("environment.startBackground: must be a text")
+            environment["backgrounds"].append({"name": background["name"], "images": images})
+
+    if "startBackground" in file:
+        if not isinstance(file["startBackground"], str):
+            raise ProgramError("environment.startBackground: must be a text")
+
+        environment["startBackground"] = file["startBackground"]
 
     if "brightness" in file:
-        expect_object(file["brightness"], "environment.brightness")
+        environment["brightness"] = cast(Brightness, expect_object(file["brightness"], "environment.brightness"))
 
     return environment
 

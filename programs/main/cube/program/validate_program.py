@@ -225,6 +225,9 @@ def validate_field(kind: FieldKind, value: Any, path: str) -> None:
     elif kind == "shape":
         validate_shape(value, path)
 
+    elif kind == "costumes":
+        validate_costumes(value, path)
+
     elif kind == "image":
         if not isinstance(value, list) or len(value) != FACE_RESOLUTION**2 or not all(map(is_color_value, value)):
             fail(path, f"must be {FACE_RESOLUTION**2} colors written as #rrggbb, row after row")
@@ -251,6 +254,31 @@ def validate_shape(value: Any, path: str) -> None:
 
         if "color" in pixel and not is_color_value(pixel["color"]):
             fail(f"{path}[{index}].color", "must be a color written as #rrggbb")
+
+
+def validate_costumes(value: Any, path: str) -> None:
+    """
+    Checks the costumes of an object: a non-empty list of looks with names that are not repeated.
+    """
+    if not isinstance(value, list) or not value:
+        fail(path, "must be a non-empty list of costumes")
+
+    names: list[Any] = []
+
+    for index, item in enumerate(value):
+        costume = expect_object(item, f"{path}[{index}]")
+
+        expect_only_keys(costume, ["name", "color", "pixels"], f"{path}[{index}]")
+        validate_field("text", costume.get("name"), f"{path}[{index}].name")
+        validate_field("color", costume.get("color"), f"{path}[{index}].color")
+
+        if "pixels" in costume:
+            validate_shape(costume["pixels"], f"{path}[{index}].pixels")
+
+        if costume["name"] in names:
+            fail(f"{path}[{index}].name", f"there is already a costume called {json.dumps(costume['name'])}")
+
+        names.append(costume["name"])
 
 
 def is_name(value: Any, names: Any) -> bool:

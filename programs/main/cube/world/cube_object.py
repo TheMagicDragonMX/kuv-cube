@@ -42,6 +42,27 @@ The shape of a plain pixel: just the center.
 """
 
 
+class Costume(TypedDict):
+    """
+    One look an object can switch to: its color and its shape.
+    """
+
+    name: str
+    """
+    What the blocks call it.
+    """
+
+    color: Color
+    """
+    Color of the pixels that do not have their own.
+    """
+
+    shape: tuple[ShapePixel, ...]
+    """
+    Pixels of the look, around the center.
+    """
+
+
 class CubeObject(TypedDict):
     """
     Something that lives on the cube and can be moved around by a program.
@@ -73,4 +94,14 @@ class CubeObject(TypedDict):
     visible: bool
     """
     Hidden objects still exist and keep moving, but are not drawn.
+    """
+
+    costumes: NotRequired[tuple[Costume, ...]]
+    """
+    The looks the object can switch between, in order. Absent when it has only the one it was created with.
+    """
+
+    costume: NotRequired[str]
+    """
+    Name of the costume it wears, when it has costumes.
     """
